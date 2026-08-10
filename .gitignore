@@ -1,0 +1,6 @@
+.DS_Store
+
+# miguri-sync (parked, not deployed)
+node_modules/
+.wrangler/
+.dev.vars

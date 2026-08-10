@@ -1,0 +1,15 @@
+name = "miguri-sync"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Origins allowed to call this worker, comma separated. Set this to wherever you host
+# miguri-planner.html. Leaving it unset means no browser origin is permitted.
+# Use "*" only while testing locally.
+[vars]
+ALLOWED_ORIGINS = "https://YOUR-USERNAME.github.io"
+
+# Create with:  npx wrangler kv namespace create PLANS
+# then paste the printed id below.
+[[kv_namespaces]]
+binding = "PLANS"
+id = "PASTE_THE_KV_NAMESPACE_ID_HERE"

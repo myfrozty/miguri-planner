@@ -1,0 +1,1376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miguri Planner</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfa;
+    --panel: #ffffff;
+    --border: #e2e2df;
+    --border-strong: #c9c9c4;
+    --text: #1c1c1a;
+    --muted: #75756e;
+    --accent: #2f6f4f;
+    --warn: #b3402b;
+    --warn-soft: #fbeae6;
+    --cell: #fdfdfc;
+    --radius: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a;
+      --panel: #1e1e23;
+      --border: #32323a;
+      --border-strong: #45454f;
+      --text: #e8e8e4;
+      --muted: #96968d;
+      --accent: #7fc4a0;
+      --warn: #e08a76;
+      --warn-soft: #33211d;
+      --cell: #232329;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Helvetica Neue", "Hiragino Sans", sans-serif;
+  }
+  h1, h2, h3 { font-weight: 600; margin: 0; }
+  h1 { font-size: 16px; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  h3 { font-size: 13px; }
+  button {
+    font: inherit; color: inherit;
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 5px 11px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 3px 7px; }
+  button.ghost:hover { color: var(--warn); }
+  input, select {
+    font: inherit; color: inherit;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 7px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  input[type=date] { min-width: 150px; }
+
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    position: sticky; top: 0; z-index: 20;
+  }
+  header .spacer { flex: 1; }
+  /* Shrinks on narrow windows but never grows to fill the bar. */
+  #singleName { flex: 0 1 240px; min-width: 130px; font-weight: 600; }
+  #saveState { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  #saveState .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--border-strong); transition: background .18s;
+  }
+  #saveState.flash .dot { background: var(--accent); }
+
+  main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+  section { margin-bottom: 26px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+
+  .rounds { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .round-tab {
+    padding: 5px 13px; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: var(--panel);
+    cursor: pointer; white-space: nowrap;
+  }
+  .round-tab.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+
+  .round-cfg {
+    margin-top: 10px; padding: 10px 14px;
+    border: 1px dashed var(--border-strong); border-radius: var(--radius);
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .field .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 3px; }
+
+  .budget { display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-end; }
+  .stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .stat .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat .v small { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .stat.over .v { color: var(--warn); }
+  .bar { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 6px; width: 150px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .bar.over > i { background: var(--warn); }
+  .alert {
+    margin-top: 12px; padding: 8px 12px; border-radius: var(--radius);
+    background: var(--warn-soft); color: var(--warn); border: 1px solid currentColor; font-size: 13px;
+  }
+  .alert.note { background: transparent; color: var(--muted); border-color: var(--border-strong); }
+
+  .scroll { overflow-x: auto; }
+  table.grid { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.grid th, table.grid td { border: 1px solid var(--border); padding: 0; text-align: center; white-space: nowrap; }
+  table.grid th { background: var(--bg); font-weight: 600; font-size: 12px; padding: 6px 10px; }
+  table.grid th.date { text-align: left; padding-left: 12px; }
+  table.grid td.date, table.grid td.part { padding: 5px 12px; font-size: 12px; }
+  table.grid td.date { text-align: left; color: var(--muted); }
+  table.grid td.part { font-weight: 600; }
+  table.grid tr.date-start td { border-top: 2px solid var(--border-strong); }
+  .cell {
+    width: 62px; height: 32px; border: 0; background: var(--cell);
+    cursor: pointer; font: inherit; font-weight: 600; font-variant-numeric: tabular-nums;
+    display: block; margin: 0 auto;
+    /* Long press is a real gesture here, so suppress the iOS text callout and selection
+       it would otherwise trigger, and drop the 300ms tap delay. */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  .cell.filled { color: #1c1c1a; }
+  .cell.zero { color: transparent; }
+  .cell:hover:not(:disabled) { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cell:disabled {
+    cursor: not-allowed;
+    background: repeating-linear-gradient(
+      -45deg, transparent, transparent 4px, var(--border) 4px, var(--border) 5px);
+  }
+  .cell.summary { cursor: default; line-height: 32px; color: #1c1c1a; }
+  .cell.summary:hover { outline: none; }
+  /* On the accumulated view, won is the figure worth reading at a glance — it is how many
+     tickets you actually hold — so it carries the weight and applied sits beside it as the
+     small companion figure. Applies to both cells and totals so the two never disagree. */
+  .pair-a { font-size: 11px; font-weight: 600; opacity: .6; }
+  .pair-w { font-size: 15px; font-weight: 700; }
+  .pair-w::before { content: '/'; margin: 0 4px; font-size: 11px; font-weight: 600; opacity: .5; }
+  .round-tab.summary-tab { margin-left: 8px; }
+  td.tot, th.tot { background: var(--bg); font-weight: 600; font-size: 12px; padding: 5px 10px; }
+  td.blocked { background: var(--warn-soft); }
+  .mode-toggle button.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .hint { color: var(--muted); font-size: 12px; }
+
+  #notices .alert:first-child { margin-top: 0; }
+  #notices { margin-bottom: 18px; }
+  #notices:empty { margin-bottom: 0; }
+
+  pre.checklist {
+    margin: 0; padding: 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+    max-height: 320px; overflow: auto; white-space: pre;
+  }
+
+  table.stats { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  table.stats th, table.stats td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+  table.stats th:first-child, table.stats td:first-child { text-align: left; }
+  /* Labels are single values — a date or a 第N部 — so never break them mid-word.
+     If the column gets too tight the table scrolls inside its own wrapper instead. */
+  table.stats th:first-child, table.stats td:first-child { white-space: nowrap; }
+  table.stats th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  table.stats tr.total td { font-weight: 600; border-top: 2px solid var(--border-strong); border-bottom: 0; }
+  .stats-scroll { overflow-x: auto; }
+  /* Two fixed rows rather than an auto-fit flow: member+round read together, date+part
+     read together, and the pairing stays put at every width instead of reshuffling.
+     minmax(0, 1fr) — not plain 1fr — lets a column shrink past its table's min-content
+     width, so .stats-scroll scrolls instead of pushing the page sideways. */
+  .stat-rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .stat-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  /* Both levels: a grid item defaults to min-width:auto, so it refuses to shrink past its
+     table's min-content width and overflows the track no matter how the track is sized. */
+  .stat-rows > *, .stat-row > * { min-width: 0; }
+  .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; vertical-align: baseline; }
+
+  .cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .cfg-grid label { display: block; }
+  .cfg-grid .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 3px; }
+  .cfg-grid input { width: 100%; }
+  .list-item { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .dow-badge {
+    display: inline-block; min-width: 42px; text-align: center;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+    padding: 4px 8px; border-radius: var(--radius);
+    background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  }
+  .dow-badge.weekend { color: var(--warn); }
+  .parts-pick { display: flex; gap: 6px; flex-wrap: wrap; }
+  .parts-pick button.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  details[open] > summary { margin-bottom: 12px; }
+
+  @media (max-width: 760px) {
+    /* Wrapped to roughly four rows on a phone, and being sticky it stayed there —
+       around 340px of an 812px screen, permanently, while scrolling the grid.
+       Let it scroll away, and drop the status text to its dot. */
+    header { padding: 10px 14px; gap: 8px 10px; position: static; }
+    header .spacer { display: none; }        /* let the buttons wrap under the title */
+    #saveText { display: none; }
+    #singleName { flex: 1 1 100%; }
+    main { padding: 14px; }
+    section { margin-bottom: 20px; }
+    .panel { padding: 13px; }
+    .budget { gap: 18px 22px; }
+    .stat .v { font-size: 19px; }
+    .bar { width: 120px; }
+    .round-cfg { gap: 12px; }
+    .cfg-grid { grid-template-columns: 1fr; }
+    .list-item { flex-wrap: wrap; }
+    /* Side by side, each table is narrower than its six columns and both scroll at once,
+       which is unreadable on a phone. Stack instead and keep the member/round then
+       date/part order, so the same pairs still sit next to each other vertically. */
+    .stat-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .stat-rows { gap: 14px; }
+    /* Six columns of yen figures do not fit a phone. Tighten them so the numbers that get
+       read most — applied, won, rate — land on screen, and leave committed/paid to the
+       panel's own sideways scroll rather than dropping them. */
+    table.stats th, table.stats td { padding: 6px 6px; }
+    table.stats th { font-size: 10px; letter-spacing: 0.03em; }
+  }
+  @media (max-width: 420px) {
+    .cell { width: 52px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Miguri Planner</h1>
+  <input id="singleName" placeholder="single name">
+  <span id="saveState"><span class="dot"></span><span id="saveText">autosaved in this browser</span></span>
+  <span class="spacer"></span>
+  <button id="btnExportJson">Export JSON</button>
+  <button id="btnImportJson">Import JSON</button>
+  <button id="btnExportCsv">Export CSV</button>
+  <button class="ghost" id="btnUndo" style="display:none">Undo</button>
+</header>
+
+<main>
+
+  <div id="notices"></div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Round</h2>
+      <span class="hint">one tab per application window</span>
+    </div>
+    <div class="row">
+      <div class="rounds" id="roundTabs"></div>
+      <button id="btnAddRound">+ round</button>
+      <button class="ghost" id="btnDelRound">delete this round</button>
+    </div>
+    <div class="round-cfg" id="roundCfg"></div>
+  </section>
+
+  <section class="panel">
+    <div class="budget" id="budget"></div>
+    <div id="budgetAlerts"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2 id="allocHead">Allocation</h2>
+      <span class="mode-toggle row" style="gap:4px" id="modeToggle">
+        <button data-mode="a" id="modeA">applied</button>
+        <button data-mode="w" id="modeW">won</button>
+      </span>
+      <span class="hint" id="allocHint">tap a cell to add a ticket, long-press (or shift-click) to remove</span>
+    </div>
+    <div class="scroll panel" style="padding:0; display:inline-block; max-width:100%">
+      <table class="grid" id="grid"></table>
+    </div>
+  </section>
+
+  <section id="checklistSection">
+    <div class="sec-head"><h2>Application checklist</h2><span class="hint">work down this list on fortunemusic</span></div>
+    <pre class="checklist" id="checklist"></pre>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Totals</h2><span class="hint">all rounds combined</span></div>
+    <div class="stat-rows" id="stats"></div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Settings — dates, parts, members, default caps</summary>
+      <div class="panel">
+        <div class="cfg-grid">
+          <label><div class="k">Limit per round</div><input type="number" min="1" id="cfgBlocks"></label>
+          <label><div class="k">Counted as</div>
+            <select id="cfgLimitUnit">
+              <option value="blocks">blocks — date + part</option>
+              <option value="entries">entries — date + part + member</option>
+            </select>
+          </label>
+          <label><div class="k">Max tickets / member / block</div><input type="number" min="1" id="cfgMaxTickets"></label>
+          <label><div class="k">Windows in rounds after the first</div><input type="number" min="1" id="cfgWindows"></label>
+          <label><div class="k">Unit price (yen)</div><input type="number" min="0" step="100" id="cfgPrice"></label>
+        </div>
+        <p class="hint" style="margin:-6px 0 18px">
+          The limit and ticket cap below are per <b>application window</b>. Round 1 is a single
+          window; later rounds run the same mechanism several times, so their caps scale by the
+          window count and each round shows its own derived figures above.
+          A <b>block</b> is one 第N部 on one date, so one row of the grid. An <b>entry</b> is one member
+          within a block, matching one line on the fortunemusic receipt. A block holding konishi and rika
+          is 1 block but 2 entries. forTUNE caps <b>entries</b>, which is why 15 × 3 tickets = 45; the
+          block option is here only in case a future single changes the rule. Reaching the limit greys
+          out the remaining cells, the same way the site does. Any round can override these above.
+        </p>
+
+        <h3 style="margin-bottom:8px">Visible parts</h3>
+        <div class="parts-pick" id="cfgParts" style="margin-bottom:20px"></div>
+
+        <h3 style="margin-bottom:8px">Dates</h3>
+        <div id="cfgDates" style="margin-bottom:8px"></div>
+        <button id="btnAddDate" style="margin-bottom:20px">+ date</button>
+
+        <h3 style="margin-bottom:8px">Members</h3>
+        <div id="cfgMembers" style="margin-bottom:8px"></div>
+        <button id="btnAddMember">+ member</button>
+
+        <hr style="margin:22px 0; border:0; border-top:1px solid var(--border)">
+        <button class="ghost" id="btnReset">Reset everything</button>
+      </div>
+    </details>
+  </section>
+
+</main>
+
+<script>
+'use strict';
+
+const KEY = 'miguri-planner-v1';
+const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
+const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+/* Sentinel round id for the read-only accumulated view across every round. */
+const ALL = '__all__';
+/* Colours reach the DOM inside a style attribute, and an imported backup is untrusted. */
+const isColor = c => /^#[0-9a-f]{3,8}$/i.test(String(c || ''));
+const safeColor = c => isColor(c) ? String(c) : PALETTE[0];
+const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+/* uid() emits [0-9a-z]{1,7}. Ids also land in HTML attributes, so keep them to characters
+   that cannot terminate one — and reject rather than rewrite, because rewriting an id
+   orphans every entry that referenced it. */
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/* Day of week from an ISO date, parsed as local time so it never slips a day. */
+function dowOf(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return '';
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return isNaN(d) ? '' : DOW[d.getDay()];
+}
+const isWeekend = iso => ['SUN', 'SAT'].includes(dowOf(iso));
+
+/* Chronological, but unfilled dates stay at the bottom rather than sorting to the top. */
+function byDate(a, b) {
+  const x = a.label || '', y = b.label || '';
+  if (!x && !y) return 0;
+  if (!x) return 1;
+  if (!y) return -1;
+  return x.localeCompare(y);
+}
+
+function defaultState() {
+  return {
+    version: 3,
+    config: {
+      // Deliberately empty. The caps and the price are the forTUNE mechanism and are the
+      // same for everyone, but the single, the dates and the members are personal, so a
+      // fresh browser starts blank rather than preloaded with somebody else's plan.
+      singleName: '',
+      unitPrice: 1200,
+      blocksPerRound: 15,
+      maxTickets: 3,
+      laterRoundWindows: 3,
+      limitUnit: 'entries',
+      allParts: [1, 2, 3, 4, 5, 6],
+      visibleParts: [2, 3, 4],
+      dates: [{ id: uid(), label: '' }],
+      members: [{ id: uid(), name: 'member', jp: '', color: PALETTE[0] }]
+    },
+    rounds: [{ id: uid(), num: 1, label: '', blocks: null, maxTickets: null, windows: null }],
+    activeRound: null,
+    mode: 'a',
+    entries: {}
+  };
+}
+
+/* Storage can be unavailable outright — private browsing, blocked site data, a full quota.
+   Probe once at startup so the UI can say so plainly rather than quietly losing edits. */
+const storageOK = (() => {
+  try {
+    localStorage.setItem(KEY + '-probe', '1');
+    localStorage.removeItem(KEY + '-probe');
+    return true;
+  } catch (e) { return false; }
+})();
+let startupError = '';
+
+/* Declared here, loaded at the very bottom. Calling load() at this point instead meant
+   migrate() ran while consts declared further down were still in their temporal dead
+   zone: every startup threw ReferenceError, load()'s catch reported it as a console
+   warning nobody sees, and the first render autosaved defaults over the real data — so
+   the app silently lost everything on reload while claiming to autosave. Initialising
+   after every declaration in the file makes that whole class of bug unreachable. */
+let S;
+
+function load() {
+  if (!storageOK) return defaultState();
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) { return defaultState(); }
+  if (!raw) return defaultState();
+  try {
+    return migrate(validate(JSON.parse(raw)));
+  } catch (e) {
+    // A state we cannot read must never be silently replaced by the next autosave. Park
+    // the raw text under its own key so it stays recoverable by hand, and tell the user.
+    try { localStorage.setItem(KEY + '-unreadable', raw); } catch (_) {}
+    startupError = e.message;
+    return defaultState();
+  }
+}
+
+/* Rejects anything that is not a planner backup instead of repairing it into one.
+   migrate() used to do both, which is how a file with no "dates" key destroyed data: the
+   default dates were merged in carrying fresh uid()s, every entry still pointed at the
+   old ids, and purge() then deleted the lot — displayed as a normal, empty planner.
+   Refusing the file outright leaves the user's existing data untouched. */
+function validate(s) {
+  if (!isObj(s)) throw new Error('not a planner backup — expected a JSON object');
+  const c = s.config;
+  if (!isObj(c)) throw new Error('no "config" section');
+  const rounds = Array.isArray(s.rounds) ? s.rounds : s.waves;   // v1 called them waves
+  if (!Array.isArray(rounds) || !rounds.length) throw new Error('no rounds');
+  if (!Array.isArray(c.dates) || !c.dates.length) throw new Error('no dates');
+  if (!Array.isArray(c.members) || !c.members.length) throw new Error('no members');
+  if (s.entries != null && !isObj(s.entries)) throw new Error('"entries" is not an object');
+
+  // Ids only matter when something references them. A hand-written file with no entries
+  // may leave them out and let migrate() mint them.
+  const hasEntries = isObj(s.entries) && Object.keys(s.entries).length > 0;
+  const check = (list, what) => list.forEach((x, i) => {
+    if (!isObj(x)) throw new Error(`${what}[${i}] is not an object`);
+    if (x.id == null) {
+      if (hasEntries) throw new Error(`${what}[${i}] has no id, so its entries cannot be matched`);
+      return;
+    }
+    if (!SAFE_ID.test(String(x.id))) throw new Error(`${what}[${i}] has an unusable id`);
+  });
+  check(c.dates, 'dates');
+  check(c.members, 'members');
+  check(rounds, 'rounds');
+  return s;
+}
+
+/* Taken immediately before any wholesale replacement of S, so import and reset are
+   undoable. One slot only — the point is rescuing the last mistake, not a history. */
+function snapshot() {
+  if (!storageOK) return;
+  try { localStorage.setItem(KEY + '-prev', JSON.stringify(S)); } catch (e) { /* nothing to do */ }
+}
+function hasSnapshot() {
+  if (!storageOK) return false;
+  try { return !!localStorage.getItem(KEY + '-prev'); } catch (e) { return false; }
+}
+
+function migrate(s) {
+  const d = defaultState();
+  const incoming = s.config || {};
+  // v1 called rounds "waves", named the block cap "blocksPerWave", and stored a
+  // manual day-of-week per date. Read the old keys before defaults are merged in,
+  // otherwise the default would mask a missing new key and the old value be lost.
+  const legacyBlocks = incoming.blocksPerRound == null ? incoming.blocksPerWave : null;
+  s.config = Object.assign({}, d.config, incoming);
+  if (legacyBlocks != null) s.config.blocksPerRound = legacyBlocks;
+  delete s.config.blocksPerWave;
+
+  // Parts are compared numerically everywhere (Set membership, +p from entry keys), so a
+  // backup carrying them as strings would give duplicate By-part rows and make the
+  // hidden-part checks miss. Coerce, drop junk, dedupe, and fall back if nothing survives.
+  const partList = (v, fb) => {
+    const nums = [...new Set((Array.isArray(v) ? v : []).map(Number).filter(Number.isFinite))];
+    return nums.length ? nums.sort((a, b) => a - b) : fb.slice();
+  };
+  s.config.allParts = partList(s.config.allParts, d.config.allParts);
+  s.config.visibleParts = partList(s.config.visibleParts, d.config.visibleParts);
+
+  const posInt = (v, fb) => Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : fb;
+  s.config.blocksPerRound = posInt(s.config.blocksPerRound, d.config.blocksPerRound);
+  s.config.maxTickets = posInt(s.config.maxTickets, d.config.maxTickets);
+  s.config.laterRoundWindows = posInt(s.config.laterRoundWindows, d.config.laterRoundWindows);
+  s.config.unitPrice = Number.isFinite(+s.config.unitPrice) && +s.config.unitPrice >= 0
+    ? Math.floor(+s.config.unitPrice) : d.config.unitPrice;
+  if (s.config.limitUnit !== 'blocks' && s.config.limitUnit !== 'entries') {
+    s.config.limitUnit = d.config.limitUnit;
+  }
+  if (s.waves && !s.rounds) { s.rounds = s.waves; delete s.waves; }
+  if (s.activeWave && !s.activeRound) { s.activeRound = s.activeWave; delete s.activeWave; }
+  s.config.dates = (s.config.dates || []).map(x => ({ id: x.id || uid(), label: x.label || '' }));
+  s.config.members = (s.config.members || []).map((m, i) => ({
+    id: m.id || uid(), name: m.name || 'member', jp: m.jp || '',
+    // Test validity directly. Comparing safeColor's output to PALETTE[0] cannot tell a
+    // fallback apart from a member legitimately set to that colour, and would reassign it.
+    color: isColor(m.color) ? String(m.color) : PALETTE[i % PALETTE.length]
+  }));
+  // A round missing a usable num poisons Math.max in "+ round" and yields "Round NaN"
+  // forever, so fall back to position rather than trusting the file.
+  // Per-round overrides were passed through untouched. capBlocks/capTickets feed them
+  // straight into innerHTML and into `used >= cap`, so a string override both injected
+  // markup and disabled the limit silently — NaN comparisons are always false, so no cell
+  // ever greyed out. Anything not a positive whole number means "no override".
+  const posIntOrNull = v => (v == null || v === '') ? null
+    : (Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : null);
+  s.rounds = (s.rounds && s.rounds.length ? s.rounds : d.rounds).map((r, i) => ({
+    id: r.id || uid(),
+    num: Number.isFinite(+r.num) && +r.num > 0 ? +r.num : i + 1,
+    label: String(r.label || ''),
+    blocks: posIntOrNull(r.blocks),
+    maxTickets: posIntOrNull(r.maxTickets),
+    windows: posIntOrNull(r.windows)
+  }));
+
+  // Entry values reach arithmetic in sum(), which uses +=. A string sneaks through `|| 0`
+  // and turns the running total into concatenation ("0" + "3" + "2" = "032"); a primitive
+  // makes get() return a non-object and the click handler's property write throw under
+  // 'use strict'. Coerce to whole non-negative counts and drop whatever cannot be one.
+  const count = v => { const n = Math.floor(+v); return Number.isFinite(n) && n > 0 ? n : 0; };
+  const clean = {};
+  for (const k in (s.entries || {})) {
+    const parts = String(k).split('|');
+    if (parts.length !== 4 || !Number.isFinite(+parts[2])) continue;
+    const e = s.entries[k];
+    if (!isObj(e)) continue;
+    const a = count(e.a), w = count(e.w);
+    if (a <= 0 && w <= 0) continue;
+    clean[k] = { a, w: Math.min(w, a) };   // same invariant set() enforces
+  }
+  s.entries = clean;
+  s.mode = s.mode || 'a';
+  // v2 guessed the round limit was counted in blocks. forTUNE actually greys out at
+  // 15 line items, so entries is the real unit. Flip once, on the v2 -> v3 hop only,
+  // so a later deliberate change to blocks is not stomped on every load.
+  if ((s.version || 1) < 3) s.config.limitUnit = 'entries';
+  s.version = 3;
+  // ALL is a valid selection even though it matches no round.
+  if (s.activeRound !== ALL && !s.rounds.some(r => r.id === s.activeRound)) {
+    s.activeRound = s.rounds[0].id;
+  }
+  return s;
+}
+
+let flashTimer = null;
+let saveFailed = false;
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(S));
+    saveFailed = false;
+    const el = document.getElementById('saveState');
+    if (!el) return;
+    el.classList.add('flash');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => el.classList.remove('flash'), 600);
+  } catch (e) {
+    console.warn('save failed', e);
+    saveFailed = true;
+    const t = document.getElementById('saveText');
+    if (t) t.textContent = 'could not save — export a JSON backup';
+  }
+}
+
+/* The header dot is easy to miss, and it is hidden entirely on a phone. Anything that
+   means "your data is not actually safe" gets said in full, at the top of the page. */
+function renderNotices() {
+  const out = [];
+  if (!storageOK) {
+    out.push('This browser is not saving anything — private browsing, or site data is '
+      + 'blocked. Everything here disappears when you close the tab. Press Export JSON '
+      + 'before you do.');
+  } else if (saveFailed) {
+    out.push('Saving failed, so recent changes exist only in this tab. '
+      + 'Press Export JSON now.');
+  }
+  if (startupError) {
+    out.push(`A saved plan was found but could not be read (${startupError}), so this `
+      + `browser started fresh. The unreadable copy has been kept under the storage key `
+      + `"${KEY}-unreadable" rather than overwritten, if you want to recover it by hand.`);
+  }
+  document.getElementById('notices').innerHTML =
+    out.map(t => `<div class="alert">${esc(t)}</div>`).join('');
+}
+
+/* ---------- entries ---------- */
+
+const ekey = (r, d, p, m) => `${r}|${d}|${p}|${m}`;
+
+function get(r, d, p, m) {
+  return S.entries[ekey(r, d, p, m)] || { a: 0, w: 0 };
+}
+function set(r, d, p, m, field, val) {
+  const k = ekey(r, d, p, m);
+  const cur = S.entries[k] || { a: 0, w: 0 };
+  cur[field] = val;
+  // You cannot win more tickets than you applied for, so lowering applied drags won
+  // down with it. Without this, {a:1, w:3} is reachable and the stats show 300%.
+  if (cur.w > cur.a) cur.w = cur.a;
+  if (cur.a === 0 && cur.w === 0) delete S.entries[k];
+  else S.entries[k] = cur;
+}
+
+function sum(field, filter) {
+  let n = 0;
+  for (const k in S.entries) {
+    const [r, d, p, m] = k.split('|');
+    if (filter && !filter({ r, d, p: +p, m })) continue;
+    n += S.entries[k][field] || 0;
+  }
+  return n;
+}
+
+/* Distinct date+part slots holding at least one ticket. One grid row = one block. */
+function blocksUsedIn(roundId) {
+  const seen = new Set();
+  for (const k in S.entries) {
+    const [r, d, p] = k.split('|');
+    if (r !== roundId) continue;
+    if ((S.entries[k].a || 0) > 0) seen.add(d + '|' + p);
+  }
+  return seen.size;
+}
+
+/* Line items: date+part+member, matching how the receipt itemises an order. */
+function entriesUsedIn(roundId) {
+  let n = 0;
+  for (const k in S.entries) {
+    if (k.split('|')[0] !== roundId) continue;
+    if ((S.entries[k].a || 0) > 0) n++;
+  }
+  return n;
+}
+
+/* Whichever unit the per-round limit is counted against. */
+const limitsEntries = () => S.config.limitUnit === 'entries';
+const limitUsedIn = rid => limitsEntries() ? entriesUsedIn(rid) : blocksUsedIn(rid);
+const limitNoun = () => limitsEntries() ? 'entries' : 'blocks';
+
+const isSummary = () => S.activeRound === ALL;
+
+const activeRound = () => S.rounds.find(r => r.id === S.activeRound);
+const roundName = r => r.label ? `Round ${r.label}` : `Round ${r.num}`;
+/* A round is one or more application windows. Round 1 is a single window; later rounds
+   run the same mechanism three times, so their caps scale with it: 3 x 15 entries and
+   3 x 3 tickets per member per block. An explicit per-round value always wins. */
+function windowsOf(r) {
+  if (Number.isFinite(+r.windows) && +r.windows > 0) return Math.floor(+r.windows);
+  return S.rounds.indexOf(r) === 0 ? 1 : S.config.laterRoundWindows;
+}
+const capBlocks = r => r.blocks || S.config.blocksPerRound * windowsOf(r);
+const capTickets = r => r.maxTickets || S.config.maxTickets * windowsOf(r);
+const visibleParts = () => S.config.visibleParts.slice().sort((a, b) => a - b);
+const dateById = id => S.config.dates.find(d => d.id === id);
+const memberById = id => S.config.members.find(m => m.id === id);
+
+/* visibleParts hides rows of the entry grid and nothing else. Allocations in a hidden
+   part are still real applications against the real forTUNE limit, so they keep counting
+   everywhere that reports truth. This surfaces them so a lockout is never mysterious. */
+function hiddenInRound(rid) {
+  const vis = new Set(S.config.visibleParts);
+  let entries = 0, tickets = 0;
+  for (const k in S.entries) {
+    const [r, , p] = k.split('|');
+    if (r !== rid || vis.has(+p)) continue;
+    const a = S.entries[k].a || 0;
+    if (a > 0) { entries++; tickets += a; }
+  }
+  return { entries, tickets };
+}
+
+/* Every part worth reporting: shown in the grid, or holding data from an earlier config. */
+function partsInUse() {
+  const seen = new Set(S.config.visibleParts);
+  for (const k in S.entries) {
+    const e = S.entries[k];
+    if ((e.a || 0) > 0 || (e.w || 0) > 0) seen.add(+k.split('|')[2]);
+  }
+  return [...seen].sort((a, b) => a - b);
+}
+
+const yenStr = n => '¥' + (n || 0).toLocaleString();
+
+/* ---------- render ---------- */
+
+function render() {
+  renderRounds();
+  renderBudget();
+  renderGrid();
+  renderChecklist();
+  renderStats();
+  renderSettings();
+  document.getElementById('singleName').value = S.config.singleName;
+  document.getElementById('modeA').classList.toggle('on', S.mode === 'a');
+  document.getElementById('modeW').classList.toggle('on', S.mode === 'w');
+  save();
+  renderNotices();   // after save(), so a failed write is reported on the same pass
+  document.getElementById('btnUndo').style.display = hasSnapshot() ? '' : 'none';
+}
+
+function renderRounds() {
+  const el = document.getElementById('roundTabs');
+  el.innerHTML = '';
+  S.rounds.forEach(r => {
+    const b = document.createElement('button');
+    b.className = 'round-tab' + (r.id === S.activeRound ? ' active' : '');
+    b.textContent = roundName(r);
+    b.onclick = () => { S.activeRound = r.id; render(); };
+    el.appendChild(b);
+  });
+
+  const all = document.createElement('button');
+  all.className = 'round-tab summary-tab' + (isSummary() ? ' active' : '');
+  all.textContent = 'All rounds';
+  all.title = 'Accumulated applied and won across every round (read only)';
+  all.onclick = () => { S.activeRound = ALL; render(); };
+  el.appendChild(all);
+
+  const cfg = document.getElementById('roundCfg');
+  cfg.innerHTML = '';
+  // The round bar, checklist and applied/won toggle are all round-scoped.
+  const roundOnly = !isSummary();
+  cfg.style.display = roundOnly ? '' : 'none';
+  document.getElementById('checklistSection').style.display = roundOnly ? '' : 'none';
+  document.getElementById('modeToggle').style.display = roundOnly ? '' : 'none';
+  document.getElementById('allocHead').textContent = roundOnly ? 'Allocation' : 'Accumulated';
+  document.getElementById('allocHint').textContent = roundOnly
+    ? 'tap a cell to add a ticket, long-press (or shift-click) to remove'
+    : 'every round combined — won shown large, applied small beside it';
+  document.getElementById('btnDelRound').style.display = roundOnly ? '' : 'none';
+  if (!roundOnly) return;
+
+  const r = activeRound();
+  const w = windowsOf(r);
+  cfg.appendChild(field('Label', textInput(r.label, v => { r.label = v.trim(); }, String(r.num), 110)));
+  cfg.appendChild(field('Windows', numInput(r.windows, v => { r.windows = v; }, w)));
+  cfg.appendChild(field(`${limitNoun()} this round`,
+    numInput(r.blocks, v => { r.blocks = v; }, S.config.blocksPerRound * w)));
+  cfg.appendChild(field('Max tickets / member / block',
+    numInput(r.maxTickets, v => { r.maxTickets = v; }, S.config.maxTickets * w)));
+  const note = document.createElement('span');
+  note.className = 'hint';
+  note.textContent = w === 1
+    ? 'one application window — blank fields use the Settings defaults'
+    : `${w} application windows — blank fields scale the Settings defaults by ${w}`;
+  cfg.appendChild(note);
+}
+
+function field(label, input) {
+  const w = document.createElement('div');
+  w.className = 'field';
+  const k = document.createElement('div');
+  k.className = 'k'; k.textContent = label;
+  w.appendChild(k); w.appendChild(input);
+  return w;
+}
+
+function renderBudget() {
+  if (isSummary()) return renderSummaryBudget();
+  const r = activeRound();
+  const rid = r.id;
+  const capped = limitUsedIn(rid);
+  const maxBlocks = capBlocks(r);
+  const maxTix = capTickets(r);
+  const applied = sum('a', e => e.r === rid);
+  const won = sum('w', e => e.r === rid);
+  const yen = applied * S.config.unitPrice;
+  const overLimit = capped > maxBlocks;
+
+  // Only the unit the round limit is counted against; the other is noise.
+  const cappedLabel = limitsEntries() ? 'Entries' : 'Blocks';
+
+  document.getElementById('budget').innerHTML = [
+    stat(cappedLabel, `${capped}<small> / ${maxBlocks}</small>`, capped / maxBlocks, overLimit),
+    stat('Tickets applied', applied, null, false),
+    stat('Tickets won', won, null, false),
+    stat('Committed', yenStr(yen), null, false),
+    stat('Paid', yenStr(won * S.config.unitPrice), null, false)
+  ].join('');
+
+  const alerts = [];
+  if (overLimit) alerts.push(`Over budget: ${capped} ${limitNoun()} used, limit is ${maxBlocks}. Remove ${capped - maxBlocks}.`);
+
+  const overCells = [];
+  for (const k in S.entries) {
+    const [rr, d, p, m] = k.split('|');
+    if (rr !== rid) continue;
+    if ((S.entries[k].a || 0) > maxTix) {
+      const dt = dateById(d), mb = memberById(m);
+      overCells.push(`${mb ? mb.name : '?'} ${dt ? dt.label : '?'} 第${p}部`);
+    }
+  }
+  if (overCells.length) alerts.push(`Over the ${maxTix}-ticket cap: ${overCells.join(', ')}.`);
+
+  const hid = hiddenInRound(rid);
+  const notes = hid.entries
+    ? [`${hid.entries} ${hid.entries === 1 ? 'entry' : 'entries'} (${hid.tickets} tickets) `
+       + `${hid.entries === 1 ? 'sits' : 'sit'} in parts hidden from the grid, and still `
+       + `${hid.entries === 1 ? 'counts' : 'count'} toward this round's limit. `
+       + `Turn those parts back on in Settings to edit them.`]
+    : [];
+
+  document.getElementById('budgetAlerts').innerHTML =
+    alerts.map(a => `<div class="alert">${esc(a)}</div>`).join('')
+    + notes.map(n => `<div class="alert note">${esc(n)}</div>`).join('');
+}
+
+/* No cap here: the round limit is per round, so an accumulated total has nothing to
+   measure against. Just the running position across the whole single. */
+function renderSummaryBudget() {
+  const price = S.config.unitPrice;
+  const applied = sum('a');
+  const won = sum('w');
+  let entries = 0;
+  for (const k in S.entries) if ((S.entries[k].a || 0) > 0) entries++;
+
+  document.getElementById('budget').innerHTML = [
+    stat('Rounds', S.rounds.length, null, false),
+    stat('Entries', entries, null, false),
+    stat('Tickets applied', applied, null, false),
+    stat('Tickets won', won, null, false),
+    stat('Win rate', rate(won, applied) || '—', null, false),
+    stat('Committed', yenStr(applied * price), null, false),
+    stat('Paid', yenStr(won * price), null, false)
+  ].join('');
+  document.getElementById('budgetAlerts').innerHTML = '';
+}
+
+function stat(k, v, ratio, over) {
+  const bar = ratio === null ? '' :
+    `<div class="bar${over ? ' over' : ''}"><i style="width:${Math.min(100, ratio * 100)}%"></i></div>`;
+  return `<div class="stat${over ? ' over' : ''}"><div class="k">${esc(k)}</div><div class="v">${v}</div>${bar}</div>`;
+}
+
+function renderGrid() {
+  if (isSummary()) return renderSummaryGrid();
+  const t = document.getElementById('grid');
+  const cfg = S.config;
+  const r = activeRound();
+  const rid = r.id;
+  const maxTix = capTickets(r);
+  const parts = visibleParts();
+  // Named `mode`, not `field`: as `field` it shadowed the module-level field(label, input)
+  // builder for this whole function, so any future call to it here would throw.
+  const mode = S.mode;
+
+  let html = '<thead><tr><th class="date">date</th><th>part</th>';
+  cfg.members.forEach(m => {
+    html += `<th><span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}</th>`;
+  });
+  html += '<th class="tot">tickets</th></tr></thead><tbody>';
+
+  // At the limit forTUNE greys out the slots you can no longer take, so do the same.
+  // Only in applied mode: recording a win is a fact and must never be blocked.
+  const atLimit = mode === 'a' && limitUsedIn(rid) >= capBlocks(r);
+
+  cfg.dates.forEach(d => {
+    const dow = dowOf(d.label);
+    parts.forEach((p, pi) => {
+      const blockTotal = cfg.members.reduce((n, m) => n + get(rid, d.id, p, m.id)[mode], 0);
+      const blockOpen = cfg.members.some(m => get(rid, d.id, p, m.id).a > 0);
+      // An empty cell costs a new entry always, but a new block only in a fresh row.
+      const wouldCost = limitsEntries() || !blockOpen;
+      html += `<tr${pi === 0 ? ' class="date-start"' : ''}>`;
+      if (pi === 0) {
+        html += `<td class="date" rowspan="${parts.length}">${esc(d.label)}`
+             +  (dow ? `<br><span class="hint">${dow}</span>` : '') + '</td>';
+      }
+      html += `<td class="part">${p}</td>`;
+      cfg.members.forEach(m => {
+        const e = get(rid, d.id, p, m.id);
+        const v = e[mode];
+        const over = mode === 'a' && v > maxTix;
+        // Applied: shut once the round limit is spent. Won: shut where nothing was
+        // applied, since a win there is impossible.
+        const shut = mode === 'a' ? (atLimit && v === 0 && wouldCost) : e.a === 0;
+        const why = mode === 'a'
+          ? `Round limit of ${capBlocks(r)} ${limitNoun()} reached`
+          : 'No tickets applied here';
+        // The button's only text is a number, and at zero it is transparent, so without
+        // this a screen reader reads the entire grid as an undifferentiated run of "0".
+        const aria = `${m.name}, ${d.label || 'date not set'} 第${p}部, `
+                   + `${v || 0} ${mode === 'a' ? 'applied' : 'won'}`;
+        html += `<td${over ? ' class="blocked"' : ''}><button class="cell ${v ? 'filled' : 'zero'}"
+          style="${v ? 'background:' + safeColor(m.color) : ''}"
+          aria-label="${esc(aria)}"
+          ${shut ? `disabled title="${esc(why)}"` : ''}
+          data-d="${esc(d.id)}" data-p="${p}" data-m="${esc(m.id)}">${v || 0}</button></td>`;
+      });
+      html += `<td class="tot">${blockTotal || ''}</td></tr>`;
+    });
+  });
+
+  html += '<tr><td class="tot" colspan="2">total</td>';
+  cfg.members.forEach(m => {
+    const n = sum(mode, e => e.r === rid && e.m === m.id);
+    html += `<td class="tot">${n || ''}</td>`;
+  });
+  html += `<td class="tot">${sum(mode, e => e.r === rid) || ''}</td></tr></tbody>`;
+  t.innerHTML = html;
+
+  t.querySelectorAll('.cell').forEach(btn => {
+    const step = down => {
+      const { d, p, m } = btn.dataset;
+      const cell = get(rid, d, +p, m);
+      const cur = cell[mode];
+      const max = mode === 'a' ? maxTix : cell.a;   // wins are bounded by applications
+      // A cell can sit above the cap after an import or a cap change. Stepping up brings
+      // it down to the cap rather than wiping the value; stepping down goes by one.
+      let next = down ? cur - 1 : (cur > max ? max : (cur >= max ? 0 : cur + 1));
+      if (next < 0) next = max;
+      set(rid, d, +p, m, mode, next);
+      render();
+    };
+    // A phone has no shift key, and the only way down was to tap up until the value
+    // wrapped past the cap. Long press is the touch equivalent of shift-click.
+    let timer = null, longFired = false;
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    btn.addEventListener('pointerdown', () => {
+      longFired = false;
+      timer = setTimeout(() => { longFired = true; step(true); }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => btn.addEventListener(e, cancel));
+    btn.oncontextmenu = ev => ev.preventDefault();   // suppress the iOS long-press callout
+    btn.onclick = ev => { if (longFired) { longFired = false; return; } step(ev.shiftKey); };
+  });
+}
+
+/* Read-only totals across every round. Shows all parts holding data, not just the
+   visible ones, so a summary is never quietly missing an allocation. */
+function renderSummaryGrid() {
+  const t = document.getElementById('grid');
+  const cfg = S.config;
+  const vis = new Set(cfg.visibleParts);
+  const parts = partsInUse();
+  const tot = (dId, p, mId, f) => S.rounds.reduce((n, r) => n + get(r.id, dId, p, mId)[f], 0);
+  /* Applied small, won large — the same pairing in cells and in every total. */
+  const pair = (a, w) => `<span class="pair-a">${a || 0}</span><span class="pair-w">${w || 0}</span>`;
+  const cellHtml = (a, w, bg) => !a && !w ? ''
+    : `<div class="cell summary" style="${a ? 'background:' + bg : ''}">${pair(a, w)}</div>`;
+
+  let html = '<thead><tr><th class="date">date</th><th>part</th>';
+  cfg.members.forEach(m => {
+    html += `<th><span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}</th>`;
+  });
+  html += '<th class="tot">tickets</th></tr></thead><tbody>';
+
+  cfg.dates.forEach(d => {
+    const dow = dowOf(d.label);
+    parts.forEach((p, pi) => {
+      html += `<tr${pi === 0 ? ' class="date-start"' : ''}>`;
+      if (pi === 0) {
+        html += `<td class="date" rowspan="${parts.length}">${esc(d.label)}`
+             +  (dow ? `<br><span class="hint">${dow}</span>` : '') + '</td>';
+      }
+      html += `<td class="part">${p}${vis.has(p) ? '' : '<span class="hint"> hid</span>'}</td>`;
+      let rowA = 0, rowW = 0;
+      const cells = cfg.members.map(m => {
+        const a = tot(d.id, p, m.id, 'a'), w = tot(d.id, p, m.id, 'w');
+        rowA += a; rowW += w;
+        return `<td>${cellHtml(a, w, safeColor(m.color))}</td>`;
+      }).join('');
+      html += cells + `<td class="tot">${rowA ? pair(rowA, rowW) : ''}</td></tr>`;
+    });
+  });
+
+  html += '<tr><td class="tot" colspan="2">total</td>';
+  cfg.members.forEach(m => {
+    const a = sum('a', e => e.m === m.id), w = sum('w', e => e.m === m.id);
+    html += `<td class="tot">${a ? pair(a, w) : ''}</td>`;
+  });
+  const ta = sum('a'), tw = sum('w');
+  html += `<td class="tot">${ta ? pair(ta, tw) : ''}</td></tr></tbody>`;
+  t.innerHTML = html;
+}
+
+function renderChecklist() {
+  if (isSummary()) return;
+  const r = activeRound();
+  const rid = r.id;
+  const cfg = S.config;
+  const vis = new Set(cfg.visibleParts);
+  const order = new Map(cfg.dates.map((d, i) => [d.id, i]));
+  // Built from the entries themselves, not from the visible grid: an allocation left in
+  // a hidden part is still one you have to make on the site, and must not go unlisted.
+  const rows = [];
+  let total = 0;
+  for (const k in S.entries) {
+    const [rr, dId, p, mId] = k.split('|');
+    if (rr !== rid) continue;
+    const a = S.entries[k].a || 0;
+    if (a <= 0) continue;
+    const d = dateById(dId), m = memberById(mId);
+    if (!d || !m) continue;
+    total += a;
+    rows.push({ d, m, p: +p, a, di: order.has(dId) ? order.get(dId) : Infinity });
+  }
+  rows.sort((x, y) => x.di - y.di || x.p - y.p || x.m.name.localeCompare(y.m.name));
+  const lines = rows.map(x => {
+    const dow = dowOf(x.d.label);
+    return `${x.d.label}${dow ? ' (' + dow + ')' : ''}  第${x.p}部  `
+         + `${x.m.name.padEnd(10)} ${x.a}${vis.has(x.p) ? '' : '   ← hidden part'}`;
+  });
+  document.getElementById('checklist').textContent = lines.length
+    ? `${roundName(r)} — ${limitUsedIn(rid)} ${limitNoun()}, `
+      + `${total} tickets, ¥${(total * cfg.unitPrice).toLocaleString()}\n\n` + lines.join('\n')
+    : 'Nothing allocated for this round yet.';
+}
+
+function renderStats() {
+  const cfg = S.config;
+  const byMember = cfg.members.map(m => ({
+    label: m.name, color: m.color,
+    a: sum('a', e => e.m === m.id), w: sum('w', e => e.m === m.id)
+  }));
+  const byRound = S.rounds.map(r => ({
+    label: roundName(r),
+    a: sum('a', e => e.r === r.id), w: sum('w', e => e.r === r.id)
+  }));
+  const byDate = cfg.dates.map(d => {
+    const dow = dowOf(d.label);
+    return {
+      label: d.label + (dow ? ` (${dow})` : ''),
+      a: sum('a', e => e.d === d.id), w: sum('w', e => e.d === d.id)
+    };
+  });
+  // Every part holding data, not just the visible ones, so all four tables agree.
+  const byPart = partsInUse().map(p => ({
+    label: '第' + p + '部' + (S.config.visibleParts.includes(p) ? '' : ' (hidden)'),
+    a: sum('a', e => e.p === p), w: sum('w', e => e.p === p)
+  }));
+
+  const row = tables => `<div class="stat-row">${tables.join('')}</div>`;
+  document.getElementById('stats').innerHTML =
+      row([statTable('By member', byMember), statTable('By round', byRound)])
+    + row([statTable('By date', byDate), statTable('By part', byPart)]);
+}
+
+function statTable(title, rows) {
+  const ta = rows.reduce((n, r) => n + r.a, 0);
+  const tw = rows.reduce((n, r) => n + r.w, 0);
+  const price = S.config.unitPrice;
+  const body = rows.map(r => `<tr>
+      <td>${r.color ? `<span class="swatch" style="background:${safeColor(r.color)}"></span>` : ''}${esc(r.label)}</td>
+      <td>${r.a || ''}</td><td>${r.w || ''}</td><td>${rate(r.w, r.a)}</td>
+      <td>${r.a ? yenStr(r.a * price) : ''}</td><td>${r.w ? yenStr(r.w * price) : ''}</td>
+    </tr>`).join('');
+  return `<div class="panel"><h3 style="margin-bottom:10px">${esc(title)}</h3>
+    <div class="stats-scroll"><table class="stats">
+      <thead><tr><th></th><th>applied</th><th>won</th><th>rate</th>
+        <th>committed</th><th>paid</th></tr></thead>
+      <tbody>${body}
+        <tr class="total"><td>total</td><td>${ta || ''}</td><td>${tw || ''}</td>
+        <td>${rate(tw, ta)}</td><td>${ta ? yenStr(ta * price) : ''}</td>
+        <td>${tw ? yenStr(tw * price) : ''}</td></tr>
+      </tbody></table></div></div>`;
+}
+const rate = (w, a) => a ? Math.round((w / a) * 100) + '%' : '';
+
+function renderSettings() {
+  const cfg = S.config;
+  document.getElementById('cfgBlocks').value = cfg.blocksPerRound;
+  document.getElementById('cfgLimitUnit').value = cfg.limitUnit;
+  document.getElementById('cfgMaxTickets').value = cfg.maxTickets;
+  document.getElementById('cfgWindows').value = cfg.laterRoundWindows;
+  document.getElementById('cfgPrice').value = cfg.unitPrice;
+
+  const pp = document.getElementById('cfgParts');
+  pp.innerHTML = '';
+  cfg.allParts.forEach(p => {
+    const b = document.createElement('button');
+    b.textContent = '第' + p + '部';
+    b.className = cfg.visibleParts.includes(p) ? 'on' : '';
+    b.onclick = () => {
+      const i = cfg.visibleParts.indexOf(p);
+      if (i >= 0) { if (cfg.visibleParts.length > 1) cfg.visibleParts.splice(i, 1); }
+      else cfg.visibleParts.push(p);
+      render();
+    };
+    pp.appendChild(b);
+  });
+
+  const dl = document.getElementById('cfgDates');
+  dl.innerHTML = '';
+  cfg.dates
+    .slice()
+    .sort(byDate)
+    .forEach(d => {
+      const picker = document.createElement('input');
+      picker.type = 'date';
+      picker.value = /^\d{4}-\d{2}-\d{2}$/.test(d.label) ? d.label : '';
+      picker.onchange = () => {
+        d.label = picker.value;
+        cfg.dates.sort(byDate);
+        render();
+      };
+      const badge = document.createElement('span');
+      const dow = dowOf(d.label);
+      badge.className = 'dow-badge' + (isWeekend(d.label) ? ' weekend' : '');
+      badge.textContent = dow || '—';
+      dl.appendChild(listItem([picker, badge], () => {
+        if (cfg.dates.length <= 1) return;
+        cfg.dates = cfg.dates.filter(x => x !== d);
+        purge(); render();
+      }));
+    });
+
+  const ml = document.getElementById('cfgMembers');
+  ml.innerHTML = '';
+  cfg.members.forEach(m => {
+    const sw = document.createElement('span');
+    sw.className = 'swatch'; sw.style.background = m.color;
+    sw.style.width = sw.style.height = '18px'; sw.style.cursor = 'pointer';
+    sw.title = 'cycle colour';
+    sw.onclick = () => {
+      m.color = PALETTE[(PALETTE.indexOf(m.color) + 1) % PALETTE.length];
+      render();
+    };
+    ml.appendChild(listItem([
+      sw,
+      textInput(m.name, v => { m.name = v; }, 'shorthand', 120),
+      textInput(m.jp, v => { m.jp = v; }, '日本語名', 140)
+    ], () => {
+      if (cfg.members.length <= 1) return;
+      cfg.members = cfg.members.filter(x => x !== m);
+      purge(); render();
+    }));
+  });
+}
+
+function listItem(children, onRemove) {
+  const row = document.createElement('div');
+  row.className = 'list-item';
+  children.forEach(c => row.appendChild(c));
+  const rm = document.createElement('button');
+  rm.className = 'ghost'; rm.textContent = 'remove';
+  rm.onclick = onRemove;
+  row.appendChild(rm);
+  return row;
+}
+function textInput(val, onChange, placeholder, width) {
+  const i = document.createElement('input');
+  i.value = val || ''; i.placeholder = placeholder || '';
+  if (width) i.style.width = width + 'px';
+  i.onchange = () => { onChange(i.value); render(); };
+  return i;
+}
+function numInput(val, onChange, placeholder) {
+  const i = document.createElement('input');
+  i.type = 'number'; i.min = '1';
+  i.value = val == null ? '' : val;
+  i.placeholder = placeholder;
+  i.style.width = '90px';
+  i.onchange = () => {
+    const v = i.value.trim() === '' ? null : Math.max(1, +i.value || 1);
+    onChange(v); render();
+  };
+  return i;
+}
+
+/* Drop entries pointing at deleted dates, members or rounds. */
+function purge() {
+  const dates = new Set(S.config.dates.map(d => d.id));
+  const members = new Set(S.config.members.map(m => m.id));
+  const rounds = new Set(S.rounds.map(r => r.id));
+  for (const k in S.entries) {
+    const [r, d, , m] = k.split('|');
+    if (!rounds.has(r) || !dates.has(d) || !members.has(m)) delete S.entries[k];
+  }
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- export ---------- */
+
+/* The BOM is here for Excel, which otherwise reads a UTF-8 CSV as mojibake. It has no
+   business in the JSON backup: browsers strip it on re-import so the app's own round trip
+   hid the problem, but jq and Python's json.load both reject a BOM-prefixed file, and that
+   backup is the one thing users are told to keep. */
+function download(name, text, type, bom) {
+  const blob = new Blob([(bom ? '﻿' : '') + text], { type: (type || 'text/plain') + ';charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+/* Numbers pass through as themselves. Everything else is free text that a spreadsheet
+   will evaluate as a formula if it opens with =, +, -, @ or a control character, so those
+   get a leading apostrophe — the value still reads correctly, it just is not executed. */
+const q = v => {
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  let s = String(v == null ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+};
+
+function exportRecords() {
+  const cfg = S.config;
+  const rows = [['single', 'round', 'date', 'dow', 'part', 'block', 'member', 'member_jp',
+                 'applied', 'won', 'unit_price', 'yen_applied']];
+  S.rounds.forEach(r => {
+    cfg.dates.forEach(d => {
+      // partsInUse(), not allParts: every other reporting path uses it so that an
+      // allocation in a part the config has since forgotten still shows up. The CSV was
+      // the one place that silently dropped those rows.
+      partsInUse().forEach(p => {
+        cfg.members.forEach(m => {
+          const e = get(r.id, d.id, p, m.id);
+          if (!e.a && !e.w) return;
+          rows.push([cfg.singleName, r.label || r.num, d.label, dowOf(d.label), p,
+                     `${d.label} 第${p}部`, m.name, m.jp,
+                     e.a, e.w, cfg.unitPrice, e.a * cfg.unitPrice]);
+        });
+      });
+    });
+  });
+  download('records.csv', rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv', true);
+}
+
+/* Shared by both replace-everything paths. Says what is actually in the incoming data,
+   because "Replace all current data?" gave no way to notice the wrong file until after. */
+function confirmReplace(next, what) {
+  const n = Object.keys(next.entries).length;
+  return confirm(`Replace everything in this browser with ${what}?\n\n`
+    + `${next.config.singleName || 'untitled'}\n`
+    + `${n} ${n === 1 ? 'entry' : 'entries'} · ${next.rounds.length} rounds · `
+    + `${next.config.members.length} members · ${next.config.dates.length} dates\n\n`
+    + `Your current data is kept, and Undo puts it back.`);
+}
+
+/* ---------- wiring ---------- */
+
+document.getElementById('singleName').onchange = e => { S.config.singleName = e.target.value; render(); };
+
+document.getElementById('btnAddRound').onclick = () => {
+  const num = Math.max(0, ...S.rounds.map(r => +r.num).filter(Number.isFinite)) + 1;
+  const r = { id: uid(), num, label: '', blocks: null, maxTickets: null, windows: null };
+  S.rounds.push(r);
+  S.activeRound = r.id;
+  render();
+};
+document.getElementById('btnDelRound').onclick = () => {
+  if (S.rounds.length <= 1) return;
+  const r = activeRound();
+  if (!confirm(`Delete ${roundName(r)} and all its entries?`)) return;
+  S.rounds = S.rounds.filter(x => x.id !== r.id);
+  S.activeRound = S.rounds[S.rounds.length - 1].id;
+  purge();
+  render();
+};
+
+document.getElementById('modeA').onclick = () => { S.mode = 'a'; render(); };
+document.getElementById('modeW').onclick = () => { S.mode = 'w'; render(); };
+
+/* min="1" on a bare input is advisory: the element reports :invalid but its value still
+   reads back as typed, so `+value || 1` cheerfully stored -3. A negative cap then reaches
+   capTickets, the click handler writes a negative ticket count that set() will not delete
+   because it is not zero, and every total, the checklist and the yen figures follow it
+   down. Clamp on the way in, and write the clamped number back so the field agrees.
+   The numInput widgets in the round bar already did this — these did not. */
+function bindNum(id, min, apply) {
+  const el = document.getElementById(id);
+  el.onchange = () => {
+    const n = Math.floor(+el.value);
+    const v = Number.isFinite(n) ? Math.max(min, n) : min;
+    el.value = v;
+    apply(v);
+    render();
+  };
+}
+bindNum('cfgBlocks', 1, v => { S.config.blocksPerRound = v; });
+bindNum('cfgMaxTickets', 1, v => { S.config.maxTickets = v; });
+bindNum('cfgWindows', 1, v => { S.config.laterRoundWindows = v; });
+bindNum('cfgPrice', 0, v => { S.config.unitPrice = v; });
+document.getElementById('cfgLimitUnit').onchange = e => { S.config.limitUnit = e.target.value; render(); };
+
+document.getElementById('btnAddDate').onclick = () => {
+  S.config.dates.push({ id: uid(), label: '' });
+  render();
+};
+document.getElementById('btnAddMember').onclick = () => {
+  S.config.members.push({ id: uid(), name: 'member', jp: '', color: PALETTE[S.config.members.length % PALETTE.length] });
+  render();
+};
+
+document.getElementById('btnExportCsv').onclick = exportRecords;
+document.getElementById('btnExportJson').onclick = () =>
+  download('miguri-backup.json', JSON.stringify(S, null, 2), 'application/json');
+
+document.getElementById('btnImportJson').onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = () => {
+    const f = inp.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        // validate() first: it rejects a file that is not a planner backup instead of
+        // letting migrate() repair it into an empty one over the top of real data.
+        const next = migrate(validate(JSON.parse(fr.result)));
+        if (!confirmReplace(next, 'this file')) return;
+        snapshot();
+        S = next;
+        purge();   // same cleanup every in-app delete does: drop orphaned entries
+        render();
+      } catch (e) { alert('Could not read that file:\n\n' + e.message); }
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+};
+
+document.getElementById('btnReset').onclick = () => {
+  if (!confirm('Reset everything? Your current data is kept, and Undo puts it back.')) return;
+  snapshot();
+  S = defaultState();
+  S.activeRound = S.rounds[0].id;
+  render();
+};
+
+/* One slot, and taking a fresh snapshot on the way makes Undo itself undoable, so a
+   mis-click on Undo is recoverable too. */
+document.getElementById('btnUndo').onclick = () => {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY + '-prev'); } catch (e) { /* handled below */ }
+  if (!raw) return;
+  try {
+    const prev = migrate(validate(JSON.parse(raw)));
+    if (!confirmReplace(prev, 'the data from before the last import or reset')) return;
+    snapshot();
+    S = prev;
+    purge();
+    render();
+  } catch (e) { alert('That saved copy could not be restored:\n\n' + e.message); }
+};
+
+/* Asks the browser to exempt this origin from routine eviction. Best-effort — Safari may
+   decline, and it is no substitute for a code or a JSON backup, which is why the notice
+   below tells people to take one. */
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
+S = load();
+if (!S.activeRound) S.activeRound = S.rounds[0].id;
+render();
+</script>
+</body>
+</html>
