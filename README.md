@@ -8,7 +8,7 @@ One self-contained HTML file. No build, no dependencies, no server, no account. 
 
 ## Use it
 
-Open `miguri-planner.html` in a browser. That is the whole install.
+Open `index.html` in a browser. That is the whole install.
 
 It works equally well saved to disk and opened from `file://`, or served from any static host.
 

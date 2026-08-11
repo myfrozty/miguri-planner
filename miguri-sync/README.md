@@ -44,7 +44,7 @@ npx wrangler kv namespace create PLANS
 
 That prints an id. Put it in `wrangler.toml` in place of `PASTE_THE_KV_NAMESPACE_ID_HERE`.
 
-Set `ALLOWED_ORIGINS` in `wrangler.toml` to wherever you host `miguri-planner.html` — for example `https://yourname.github.io`.
+Set `ALLOWED_ORIGINS` in `wrangler.toml` to wherever you host the planner — for example `https://yourname.github.io`.
 Only listed origins can call the worker from a browser.
 Use `"*"` for local testing only.
 
@@ -58,7 +58,7 @@ Wrangler prints the worker URL, something like `https://miguri-sync.yourname.wor
 
 ## Connect the planner to it
 
-In `miguri-planner.html`, find:
+In `index.html`, find:
 
 ```js
 const SYNC_URL = '';

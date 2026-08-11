@@ -1,7 +1,7 @@
 # Miguri Planner — porting and improvement plan
 
 Status as of 2026-08-09.
-The app is one self-contained `miguri-planner.html`, around 1,380 lines, no build step, no dependencies, no server.
+The app is one self-contained `index.html`, around 1,380 lines, no build step, no dependencies, no server.
 It has been hardened for public use (see "What was already fixed").
 
 This document is the argument for and against porting it, and the plan if you do.
