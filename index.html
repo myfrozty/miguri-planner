@@ -396,7 +396,11 @@ function defaultState() {
       laterRoundWindows: 3,
       limitUnit: 'entries',
       allParts: [1, 2, 3, 4, 5, 6],
-      visibleParts: [2, 3, 4],
+      // All six on by default. Hiding some is a personal preference and belongs in
+      // Settings; shipping with 1, 5 and 6 hidden meant anyone who never opened Settings
+      // would plan around three slots without learning the other three existed.
+      // 18th times: 第1部 10:45, 第2部 12:15, 第3部 13:45, 第4部 15:45, 第5部 17:15, 第6部 18:45.
+      visibleParts: [1, 2, 3, 4, 5, 6],
       dates: [
         { id: uid(), label: '2026-10-04' },
         { id: uid(), label: '2026-10-11' },
@@ -407,7 +411,16 @@ function defaultState() {
       ],
       members: [{ id: uid(), name: 'member', jp: '', color: PALETTE[0] }]
     },
-    rounds: [{ id: uid(), num: 1, label: '', blocks: null, maxTickets: null, windows: null }],
+    // The 18th does not scale uniformly: 第1次 is one application, 第2次 allows 3 per
+    // person and 第3次 allows 5. laterRoundWindows is a single number and cannot express
+    // that, so the three rounds ship with explicit window counts. Each application carries
+    // its own 1人15種類 / 1種あたり3枚 limit, which is exactly what a window means here —
+    // so 第3次 is 15 x 5 = 75 entries and 3 x 5 = 15 tickets per member per block.
+    rounds: [
+      { id: uid(), num: 1, label: '', blocks: null, maxTickets: null, windows: 1 },
+      { id: uid(), num: 2, label: '', blocks: null, maxTickets: null, windows: 3 },
+      { id: uid(), num: 3, label: '', blocks: null, maxTickets: null, windows: 5 }
+    ],
     activeRound: null,
     mode: 'a',
     entries: {}
