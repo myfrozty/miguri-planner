@@ -181,6 +181,25 @@ Bring this back when device transfer becomes the thing people actually complain 
 
 This is also the feature that flips the porting decision. Crypto, network calls, expiry and a pile of error states is materially more logic than v1.0 has, and it is logic you want under test.
 
+### Keeping past singles
+
+Requested 2026-08-11. Today the state holds exactly one single: change the dates and the members and the previous single's numbers are gone.
+Every planner is therefore a snapshot of whatever is currently open, and the win rates you accumulate over a single are lost the moment you set up the next one.
+
+What it should become: a plan per single, switchable, with the totals readable both within one single and across all of them.
+"Which member do I actually win with" only becomes answerable with several singles of history, and that is the interesting question — a single round tells you almost nothing.
+
+Sketch, not a commitment:
+
+- `S` grows a `singles: { [id]: { config, rounds, entries } }` plus a `currentSingle`, with today's shape becoming the first entry. This is a real schema change: bump the version and write the migration that lifts a v3 state into `singles` under its existing name, with a test fixture taken from a genuine pre-change export.
+- A picker beside the single name, in the same spirit as the round tabs.
+- The accumulated view gains a scope: this single, or everything. By-member across all singles is the number people will actually want.
+- CSV export gains a `single` column — it already writes one, so the format survives.
+- Archived singles should be read-only by default. Reopening a finished single and clicking a cell by accident should not be possible.
+
+Worth doing before the 19th's application round if it is going to be done at all, so that the 18th's results are the first thing preserved rather than the first thing lost.
+Storage size is not a concern: a full single is roughly 6KB of JSON, so dozens fit inside a normal localStorage quota.
+
 ### Other deferred items
 
 - CSV import, for the lossiness reasons above. If it ever comes back, it should merge into the existing config rather than rebuild the state.

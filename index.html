@@ -72,6 +72,14 @@
     position: sticky; top: 0; z-index: 20;
   }
   header .spacer { flex: 1; }
+  .brand { display: inline-flex; align-items: baseline; gap: 7px; }
+  /* Baseline alignment pins the marker to the title's *first* line, so a wrapped title
+     would strand it halfway up. The title is short enough never to need two lines. */
+  .brand h1 { white-space: nowrap; }
+  #version {
+    font-size: 11px; color: var(--muted);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em; white-space: nowrap;
+  }
   /* Shrinks on narrow windows but never grows to fill the bar. */
   #singleName { flex: 0 1 240px; min-width: 130px; font-weight: 600; }
   #saveState { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -251,7 +259,7 @@
 <body>
 
 <header>
-  <h1>Miguri Planner</h1>
+  <span class="brand"><h1>Miguri Planner</h1><span id="version"></span></span>
   <input id="singleName" placeholder="single name">
   <span id="saveState"><span class="dot"></span><span id="saveText">autosaved in this browser</span></span>
   <span class="spacer"></span>
@@ -323,15 +331,12 @@
           <label><div class="k">Windows in rounds after the first</div><input type="number" min="1" id="cfgWindows"></label>
           <label><div class="k">Unit price (yen)</div><input type="number" min="0" step="100" id="cfgPrice"></label>
         </div>
-        <p class="hint" style="margin:-6px 0 18px">
-          The limit and ticket cap below are per <b>application window</b>. Round 1 is a single
-          window; later rounds run the same mechanism several times, so their caps scale by the
-          window count and each round shows its own derived figures above.
-          A <b>block</b> is one 第N部 on one date, so one row of the grid. An <b>entry</b> is one member
-          within a block, matching one line on the fortunemusic receipt. A block holding konishi and rika
-          is 1 block but 2 entries. forTUNE caps <b>entries</b>, which is why 15 × 3 tickets = 45; the
-          block option is here only in case a future single changes the rule. Reaching the limit greys
-          out the remaining cells, the same way the site does. Any round can override these above.
+        <p class="hint" style="margin:-6px 0 18px; max-width:80ch">
+          An <b>entry</b> is one member in one 第N部 on one date — one line on the receipt.
+          A <b>block</b> is that whole row, however many members are in it. forTUNE caps
+          entries, which is why 15 × 3 = 45. These figures are per <b>application window</b>,
+          so a round with several windows scales them, and any round can override them above.
+          Cells grey out at the limit, as the site does.
         </p>
 
         <h3 style="margin-bottom:8px">Visible parts</h3>
@@ -349,6 +354,18 @@
         </label>
 
         <hr style="margin:22px 0; border:0; border-top:1px solid var(--border)">
+        <h3 style="margin-bottom:8px">Where your plan is kept</h3>
+        <p class="hint" style="margin:0 0 16px; max-width:80ch">
+          In this browser, and nowhere else. Nothing is uploaded and nothing is shared
+          between your devices. It survives closing the tab, restarting, and updates to
+          this page — it does <b>not</b> survive clearing site data, private browsing, or
+          moving to another phone or browser.
+          <br><br>
+          So: press <b>Export JSON</b> whenever you have something you would not want to
+          redo, and keep the file somewhere ordinary. <b>Import JSON</b> loads it back,
+          here or on any other device — that is also how you carry a plan to your phone.
+          Importing or resetting can be taken back with <b>Undo</b> in the top bar.
+        </p>
         <button class="ghost" id="btnReset">Reset everything</button>
       </div>
     </details>
@@ -358,6 +375,10 @@
 
 <script>
 'use strict';
+
+/* Release name, bumped by hand when something notable ships. Never derive the storage KEY
+   from it — KEY changing is what silently orphans everyone's saved plan. */
+const APP_VERSION = 'v1.0';
 
 const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
@@ -1502,6 +1523,25 @@ document.getElementById('btnUndo').onclick = () => {
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {});
 }
+
+/* APP_VERSION is bumped by hand and will eventually be forgotten, and a version marker
+   that lies is worse than none. So the date beside it comes from document.lastModified —
+   the Last-Modified header GitHub Pages sends for this exact file — which cannot drift.
+   It also reports the build the user is genuinely running rather than the newest one,
+   because a cached copy carries its own header. Opened from disk it falls back to the
+   saved file's own timestamp, which is still the right answer. */
+(() => {
+  const el = document.getElementById('version');
+  const d = new Date(document.lastModified);
+  if (isNaN(d)) {
+    el.textContent = APP_VERSION;
+    el.title = 'build date unavailable';
+    return;
+  }
+  const p = n => String(n).padStart(2, '0');
+  el.textContent = `${APP_VERSION} · ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  el.title = `${APP_VERSION}, built ${d.toLocaleString()}`;
+})();
 
 S = load();
 if (!S.activeRound) S.activeRound = S.rounds[0].id;

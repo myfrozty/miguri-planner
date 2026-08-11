@@ -50,6 +50,8 @@ The app refuses to import a file that is not a planner backup rather than trying
 
 v1.0 is deliberately five things: the planner, JSON export/import, CSV export, the results views, and settings.
 
+Planned: keeping past singles rather than one at a time, so win rates accumulate across singles instead of being lost when the next one is set up.
+
 `miguri-sync/` is parked work — a device-transfer service that is not part of v1.0 and is not deployed. See [miguri-planner-PORTING.md](miguri-planner-PORTING.md) for what it was, what else is deferred, and the argument for and against porting this to TypeScript later.
 
 ## Browser support
