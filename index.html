@@ -343,7 +343,10 @@
 
         <h3 style="margin-bottom:8px">Members</h3>
         <div id="cfgMembers" style="margin-bottom:8px"></div>
-        <button id="btnAddMember">+ member</button>
+        <label class="row" style="gap:8px">
+          <select id="addMember"></select>
+          <span class="hint">picking one fills in the name — both fields stay editable</span>
+        </label>
 
         <hr style="margin:22px 0; border:0; border-top:1px solid var(--border)">
         <button class="ghost" id="btnReset">Reset everything</button>
@@ -359,6 +362,26 @@
 const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
 const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+/* The 18th's miguri lineup: the official roster minus 山口陽世, who is not appearing for
+   this single or later ones. Deliberately the event lineup and not the artist page —
+   those differ, and a picker that offers someone you cannot apply to is worse than free
+   text, because it looks authoritative.
+   Baked in rather than fetched: there is no backend, and this only ever *seeds* two
+   editable fields, so when the lineup next changes nobody is stuck — they type a name.
+   Shorthand is the surname in romaji, a starting point that stays editable. */
+const ROSTER = [
+  ['二期生', [['金村美玖', 'kanemura'], ['小坂菜緒', 'kosaka']]],
+  ['三期生', [['上村ひなの', 'kamimura'], ['髙橋未来虹', 'takahashi'], ['森本茉莉', 'morimoto']]],
+  ['四期生', [['石塚瑶季', 'ishizuka'], ['小西夏菜実', 'konishi'], ['清水理央', 'shimizu'],
+              ['正源司陽子', 'shogenji'], ['竹内希来里', 'takeuchi'], ['平尾帆夏', 'hirao'],
+              ['平岡海月', 'hiraoka'], ['藤嶌果歩', 'fujishima'], ['宮地すみれ', 'miyachi'],
+              ['山下葉留花', 'yamashita'], ['渡辺莉奈', 'watanabe']]],
+  ['五期生', [['大田美月', 'ota'], ['大野愛実', 'ono'], ['片山紗希', 'katayama'],
+              ['蔵盛妃那乃', 'kuramori'], ['坂井新奈', 'sakai'], ['佐藤優羽', 'sato'],
+              ['下田衣珠季', 'shimoda'], ['高井俐香', 'takai'], ['鶴崎仁香', 'tsurusaki'],
+              ['松尾桜', 'matsuo']]]
+];
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -1215,6 +1238,56 @@ function renderSettings() {
       purge(); render();
     }));
   });
+
+  renderMemberPicker();
+}
+
+/* Seeds the two editable fields from the lineup rather than replacing them. Anyone
+   already added drops out of the list, so it doubles as a record of who is left. */
+function renderMemberPicker() {
+  const cfg = S.config;
+  const add = document.getElementById('addMember');
+  const taken = new Set(cfg.members.map(m => m.jp).filter(Boolean));
+  add.innerHTML = '';
+
+  const opt = (value, text, short) => {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = text;
+    if (short) o.dataset.short = short;
+    return o;
+  };
+  add.appendChild(opt('', '+ add a member…'));
+  ROSTER.forEach(([gen, list]) => {
+    const left = list.filter(([jp]) => !taken.has(jp));
+    if (!left.length) return;
+    const og = document.createElement('optgroup');
+    og.label = gen;
+    left.forEach(([jp, short]) => og.appendChild(opt(jp, `${jp}  ·  ${short}`, short)));
+    add.appendChild(og);
+  });
+  add.appendChild(opt('__custom__', 'someone else…'));
+  add.value = '';
+
+  add.onchange = () => {
+    const v = add.value;
+    if (!v) return;
+    const chosen = add.selectedOptions[0];
+    // A fresh browser starts on one untouched placeholder. Fill that in on the first pick
+    // instead of leaving a stray empty "member" column beside the real one — it cannot be
+    // deleted anyway while it is the only row.
+    const only = cfg.members.length === 1 ? cfg.members[0] : null;
+    const blank = only && only.name === 'member' && !only.jp
+      && !Object.keys(S.entries).some(k => k.split('|')[3] === only.id);
+    const target = blank ? only
+      : { id: uid(), name: '', jp: '', color: PALETTE[cfg.members.length % PALETTE.length] };
+    if (v === '__custom__') {
+      target.name = 'member'; target.jp = '';
+    } else {
+      target.name = chosen.dataset.short; target.jp = v;
+    }
+    if (!blank) cfg.members.push(target);
+    render();
+  };
 }
 
 function listItem(children, onRemove) {
@@ -1368,10 +1441,8 @@ document.getElementById('btnAddDate').onclick = () => {
   S.config.dates.push({ id: uid(), label: '' });
   render();
 };
-document.getElementById('btnAddMember').onclick = () => {
-  S.config.members.push({ id: uid(), name: 'member', jp: '', color: PALETTE[S.config.members.length % PALETTE.length] });
-  render();
-};
+// Adding a member is wired inside renderMemberPicker(), since the <select> is rebuilt on
+// every render to drop whoever has already been added.
 
 document.getElementById('btnExportCsv').onclick = exportRecords;
 document.getElementById('btnExportJson').onclick = () =>
