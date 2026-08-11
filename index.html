@@ -186,6 +186,17 @@
      table's min-content width and overflows the track no matter how the track is sized. */
   .stat-rows > *, .stat-row > * { min-width: 0; }
   .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; vertical-align: baseline; }
+  /* A native colour input, sized down to read as a swatch. The vendor pseudo-elements are
+     the only way to remove the default inset padding and border around the colour area. */
+  input[type=color].swatch-pick {
+    -webkit-appearance: none; appearance: none;
+    width: 28px; height: 28px; padding: 0; flex: none;
+    background: none; cursor: pointer;
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+  }
+  input[type=color].swatch-pick::-webkit-color-swatch-wrapper { padding: 2px; }
+  input[type=color].swatch-pick::-webkit-color-swatch { border: 0; border-radius: 3px; }
+  input[type=color].swatch-pick::-moz-color-swatch { border: 0; border-radius: 3px; }
 
   .cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
   .cfg-grid label { display: block; }
@@ -728,6 +739,32 @@ function partsInUse() {
 
 const yenStr = n => '¥' + (n || 0).toLocaleString();
 
+/* <input type="color"> accepts only #rrggbb, so widen a 3-digit hex and drop any alpha
+   instead of letting the control silently fall back to black on an older saved colour. */
+function hex6(c) {
+  const h = safeColor(c).replace('#', '');
+  const full = h.length === 3 ? h.split('').map(x => x + x).join('') : h.slice(0, 6).padEnd(6, '0');
+  return '#' + full.toLowerCase();
+}
+
+/* Members choose their own colour now, so any background is reachable and the ticket count
+   sits directly on it. Pick the text from the background's WCAG relative luminance rather
+   than leaving someone with black-on-navy.
+   Pure black and white, not the theme's softer #1c1c1a / #f7f7f4: with only two text
+   colours the worst case is the background where both are equally legible, and softening
+   either one drags that worst case below the 4.5:1 AA floor — a saturated red like
+   #e12d0f fell to 3.73:1. Pure black/white puts the floor at 4.58:1.
+   0.179 is where the two are equal, so it is the threshold that maximises that floor. */
+function textOn(bg) {
+  const h = hex6(bg).slice(1);
+  const chan = i => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const L = 0.2126 * chan(0) + 0.7152 * chan(2) + 0.0722 * chan(4);
+  return L > 0.179 ? '#000000' : '#ffffff';
+}
+
 /* ---------- render ---------- */
 
 function render() {
@@ -929,7 +966,7 @@ function renderGrid() {
         const aria = `${m.name}, ${d.label || 'date not set'} 第${p}部, `
                    + `${v || 0} ${mode === 'a' ? 'applied' : 'won'}`;
         html += `<td${over ? ' class="blocked"' : ''}><button class="cell ${v ? 'filled' : 'zero'}"
-          style="${v ? 'background:' + safeColor(m.color) : ''}"
+          style="${v ? `background:${safeColor(m.color)};color:${textOn(m.color)}` : ''}"
           aria-label="${esc(aria)}"
           ${shut ? `disabled title="${esc(why)}"` : ''}
           data-d="${esc(d.id)}" data-p="${p}" data-m="${esc(m.id)}">${v || 0}</button></td>`;
@@ -984,7 +1021,7 @@ function renderSummaryGrid() {
   /* Applied small, won large — the same pairing in cells and in every total. */
   const pair = (a, w) => `<span class="pair-a">${a || 0}</span><span class="pair-w">${w || 0}</span>`;
   const cellHtml = (a, w, bg) => !a && !w ? ''
-    : `<div class="cell summary" style="${a ? 'background:' + bg : ''}">${pair(a, w)}</div>`;
+    : `<div class="cell summary" style="${a ? `background:${bg};color:${textOn(bg)}` : ''}">${pair(a, w)}</div>`;
 
   let html = '<thead><tr><th class="date">date</th><th>part</th>';
   cfg.members.forEach(m => {
@@ -1155,14 +1192,19 @@ function renderSettings() {
   const ml = document.getElementById('cfgMembers');
   ml.innerHTML = '';
   cfg.members.forEach(m => {
-    const sw = document.createElement('span');
-    sw.className = 'swatch'; sw.style.background = m.color;
-    sw.style.width = sw.style.height = '18px'; sw.style.cursor = 'pointer';
-    sw.title = 'cycle colour';
-    sw.onclick = () => {
-      m.color = PALETTE[(PALETTE.indexOf(m.color) + 1) % PALETTE.length];
-      render();
-    };
+    // Was a swatch that cycled through PALETTE, which meant a colour outside those eight
+    // was unreachable. PALETTE now only seeds a new member with a sensible starting point.
+    const sw = document.createElement('input');
+    sw.type = 'color';
+    sw.className = 'swatch-pick';
+    sw.value = hex6(m.color);
+    sw.title = 'pick this member’s colour';
+    sw.setAttribute('aria-label', `colour for ${m.name || 'this member'}`);
+    // input fires continuously while dragging inside the picker; change fires on commit.
+    // Record on both, repaint on commit only — a full grid re-render per pixel of drag is
+    // wasted work, and the control already previews the colour while you choose.
+    sw.oninput = () => { m.color = sw.value; };
+    sw.onchange = () => { m.color = sw.value; render(); };
     ml.appendChild(listItem([
       sw,
       textInput(m.name, v => { m.name = v; }, 'shorthand', 120),
