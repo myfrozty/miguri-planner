@@ -384,10 +384,12 @@ function defaultState() {
   return {
     version: 3,
     config: {
-      // Deliberately empty. The caps and the price are the forTUNE mechanism and are the
-      // same for everyone, but the single, the dates and the members are personal, so a
-      // fresh browser starts blank rather than preloaded with somebody else's plan.
-      singleName: '',
+      // The single and its dates are public schedule information, identical for everyone
+      // planning this round, so they ship preloaded. Members stay blank on purpose: who
+      // you are applying for is the personal part, and nobody should open this and find
+      // somebody else's list already filled in.
+      // All six announced dates are Sundays.
+      singleName: '18th single「イチャイチャ虫」',
       unitPrice: 1200,
       blocksPerRound: 15,
       maxTickets: 3,
@@ -395,7 +397,14 @@ function defaultState() {
       limitUnit: 'entries',
       allParts: [1, 2, 3, 4, 5, 6],
       visibleParts: [2, 3, 4],
-      dates: [{ id: uid(), label: '' }],
+      dates: [
+        { id: uid(), label: '2026-10-04' },
+        { id: uid(), label: '2026-10-11' },
+        { id: uid(), label: '2026-10-18' },
+        { id: uid(), label: '2026-10-25' },
+        { id: uid(), label: '2026-11-01' },
+        { id: uid(), label: '2026-12-06' }
+      ],
       members: [{ id: uid(), name: 'member', jp: '', color: PALETTE[0] }]
     },
     rounds: [{ id: uid(), num: 1, label: '', blocks: null, maxTickets: null, windows: null }],
