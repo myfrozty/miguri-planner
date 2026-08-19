@@ -146,6 +146,15 @@
     -webkit-user-select: none; user-select: none;
   }
   .cell.filled { color: #1c1c1a; }
+  /* The badge sits in the corner clear of the applied number, so the cell anchors it.
+     .cell.zero paints its text transparent and the badge is a child of it, so the badge
+     needs its own colour or it inherits that invisibility. */
+  .cell { position: relative; }
+  .held {
+    position: absolute; top: 1px; right: 3px;
+    font-size: 10px; font-weight: 700; line-height: 1;
+    color: var(--text); opacity: .85; letter-spacing: -.02em;
+  }
   .cell.zero { color: transparent; }
   .cell:hover:not(:disabled) { outline: 2px solid var(--accent); outline-offset: -2px; }
   .cell:disabled {
@@ -380,7 +389,7 @@
 
 /* Release name, bumped by hand when something notable ships. Never derive the storage KEY
    from it — KEY changing is what silently orphans everyone's saved plan. */
-const APP_VERSION = 'v1.1';
+const APP_VERSION = 'v1.2';
 
 const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
@@ -785,6 +794,17 @@ function partsInUse() {
 
 const yenStr = n => '¥' + (n || 0).toLocaleString();
 
+/* Tickets already won at this exact date+part+member in the rounds BEFORE the one being
+   viewed — what was in hand going into it. That is the number you allocate against: seeing
+   2 already won on a slot is what tells you to top it up rather than start somewhere new.
+   Deliberately not every round. Counting all of them replays the current round's own
+   results back at you, which the won tab already shows, so round 1 filled up with badges
+   that meant nothing. Earlier-rounds-only makes round 1 silent, which is the truth. */
+function heldAt(dId, p, mId) {
+  const before = S.rounds.slice(0, S.rounds.indexOf(activeRound()));
+  return before.reduce((n, r) => n + get(r.id, dId, p, mId).w, 0);
+}
+
 /* <input type="color"> accepts only #rrggbb, so widen a 3-digit hex and drop any alpha
    instead of letting the control silently fall back to black on an older saved colour. */
 function hex6(c) {
@@ -855,7 +875,7 @@ function renderRounds() {
   document.getElementById('modeToggle').style.display = roundOnly ? '' : 'none';
   document.getElementById('allocHead').textContent = roundOnly ? 'Allocation' : 'Accumulated';
   document.getElementById('allocHint').textContent = roundOnly
-    ? 'tap a cell to add a ticket, long-press (or shift-click) to remove'
+    ? 'tap a cell to add a ticket, long-press (or shift-click) to remove — ✓ is what you already won there'
     : 'every round combined — won shown large, applied small beside it';
   document.getElementById('btnDelRound').style.display = roundOnly ? '' : 'none';
   if (!roundOnly) return;
@@ -904,6 +924,12 @@ function renderBudget() {
     stat(cappedLabel, `${capped}<small> / ${maxBlocks}</small>`, capped / maxBlocks, overLimit),
     stat('Tickets applied', applied, null, false),
     stat('Tickets won', won, null, false),
+    // This round's own wins are 0 mid-application — correct, but not the number you need.
+    // Same rule as the badges: what was in hand before this round started.
+    stat('Held going in', (() => {
+      const before = new Set(S.rounds.slice(0, S.rounds.indexOf(r)).map(x => x.id));
+      return sum('w', e => before.has(e.r));
+    })(), null, false),
     stat('Committed', yenStr(yen), null, false),
     stat('Paid', yenStr(won * S.config.unitPrice), null, false)
   ].join('');
@@ -1014,13 +1040,25 @@ function renderGrid() {
           : 'No tickets applied here';
         // The button's only text is a number, and at zero it is transparent, so without
         // this a screen reader reads the entire grid as an undifferentiated run of "0".
+        // Applied mode only: in won mode the cell *is* the won figure, so a second one
+        // beside it would say the same thing twice.
+        const held = mode === 'a' ? heldAt(d.id, p, m.id) : 0;
+        // Holding tickets somewhere you are not applying this round is worth seeing, so an
+        // otherwise-empty cell gets a ring in the member's own colour. A translucent fill
+        // was tried first and composited to mud over the dark theme — a yellow pastel at
+        // 22% became rgb(83,75,63), only 1.6:1 against an empty cell. A ring keeps the
+        // palette colour at full saturation and reads the same in either theme.
+        const ring = !v && held ? `box-shadow:inset 0 0 0 2px ${safeColor(m.color)};` : '';
         const aria = `${m.name}, ${d.label || 'date not set'} 第${p}部, `
-                   + `${v || 0} ${mode === 'a' ? 'applied' : 'won'}`;
+                   + `${v || 0} ${mode === 'a' ? 'applied' : 'won'}`
+                   + (held ? `, ${held} already won here` : '');
         html += `<td${over ? ' class="blocked"' : ''}><button class="cell ${v ? 'filled' : 'zero'}"
-          style="${v ? `background:${safeColor(m.color)};color:${textOn(m.color)}` : ''}"
+          style="${v ? `background:${safeColor(m.color)};color:${textOn(m.color)};` : ring}"
           aria-label="${esc(aria)}"
           ${shut ? `disabled title="${esc(why)}"` : ''}
-          data-d="${esc(d.id)}" data-p="${p}" data-m="${esc(m.id)}">${v || 0}</button></td>`;
+          data-d="${esc(d.id)}" data-p="${p}" data-m="${esc(m.id)}">${v || 0}`
+          + (held ? `<span class="held"${v ? ` style="color:${textOn(m.color)}"` : ''}>✓${held}</span>` : '')
+          + `</button></td>`;
       });
       // The row now spans parts, so this is what that member is doing on that date.
       html += `<td class="tot">${rowTotal || ''}</td></tr>`;
