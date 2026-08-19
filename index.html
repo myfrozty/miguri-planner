@@ -132,6 +132,8 @@
   table.grid td.date, table.grid td.part { padding: 5px 12px; font-size: 12px; }
   table.grid td.date { text-align: left; color: var(--muted); }
   table.grid td.part { font-weight: 600; }
+  /* The row label is now a member, so it reads left-aligned beside the date. */
+  table.grid td.member { padding: 5px 12px; font-size: 12px; font-weight: 600; text-align: left; }
   table.grid tr.date-start td { border-top: 2px solid var(--border-strong); }
   .cell {
     width: 62px; height: 32px; border: 0; background: var(--cell);
@@ -378,7 +380,7 @@
 
 /* Release name, bumped by hand when something notable ships. Never derive the storage KEY
    from it — KEY changing is what silently orphans everyone's saved plan. */
-const APP_VERSION = 'v1.0';
+const APP_VERSION = 'v1.1';
 
 const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
@@ -972,10 +974,12 @@ function renderGrid() {
   // builder for this whole function, so any future call to it here would throw.
   const mode = S.mode;
 
-  let html = '<thead><tr><th class="date">date</th><th>part</th>';
-  cfg.members.forEach(m => {
-    html += `<th><span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}</th>`;
-  });
+  // Rows are date x member, columns are 第N部 — the order the forTUNE ballot is filled in:
+  // choose the member, then pick parts along the row. Storage is a flat
+  // round|date|part|member map with no notion of rows or columns, so this is only how the
+  // same data is drawn; nothing about it is persisted and the axes could swap back freely.
+  let html = '<thead><tr><th class="date">date</th><th>member</th>';
+  parts.forEach(p => { html += `<th>第${p}部</th>`; });
   html += '<th class="tot">tickets</th></tr></thead><tbody>';
 
   // At the limit forTUNE greys out the slots you can no longer take, so do the same.
@@ -984,21 +988,24 @@ function renderGrid() {
 
   cfg.dates.forEach(d => {
     const dow = dowOf(d.label);
-    parts.forEach((p, pi) => {
-      const blockTotal = cfg.members.reduce((n, m) => n + get(rid, d.id, p, m.id)[mode], 0);
-      const blockOpen = cfg.members.some(m => get(rid, d.id, p, m.id).a > 0);
-      // An empty cell costs a new entry always, but a new block only in a fresh row.
-      const wouldCost = limitsEntries() || !blockOpen;
-      html += `<tr${pi === 0 ? ' class="date-start"' : ''}>`;
-      if (pi === 0) {
-        html += `<td class="date" rowspan="${parts.length}">${esc(d.label)}`
+    cfg.members.forEach((m, mi) => {
+      html += `<tr${mi === 0 ? ' class="date-start"' : ''}>`;
+      if (mi === 0) {
+        html += `<td class="date" rowspan="${cfg.members.length}">${esc(d.label)}`
              +  (dow ? `<br><span class="hint">${dow}</span>` : '') + '</td>';
       }
-      html += `<td class="part">${p}</td>`;
-      cfg.members.forEach(m => {
+      html += `<td class="member"><span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}</td>`;
+      let rowTotal = 0;
+      parts.forEach(p => {
         const e = get(rid, d.id, p, m.id);
         const v = e[mode];
+        rowTotal += v;
         const over = mode === 'a' && v > maxTix;
+        // A block is one date+part whichever way the grid is drawn. It used to be one row,
+        // so this was computed once per row; now a row spans every part, making it a
+        // per-cell question instead.
+        const blockOpen = cfg.members.some(x => get(rid, d.id, p, x.id).a > 0);
+        const wouldCost = limitsEntries() || !blockOpen;
         // Applied: shut once the round limit is spent. Won: shut where nothing was
         // applied, since a win there is impossible.
         const shut = mode === 'a' ? (atLimit && v === 0 && wouldCost) : e.a === 0;
@@ -1015,13 +1022,14 @@ function renderGrid() {
           ${shut ? `disabled title="${esc(why)}"` : ''}
           data-d="${esc(d.id)}" data-p="${p}" data-m="${esc(m.id)}">${v || 0}</button></td>`;
       });
-      html += `<td class="tot">${blockTotal || ''}</td></tr>`;
+      // The row now spans parts, so this is what that member is doing on that date.
+      html += `<td class="tot">${rowTotal || ''}</td></tr>`;
     });
   });
 
   html += '<tr><td class="tot" colspan="2">total</td>';
-  cfg.members.forEach(m => {
-    const n = sum(mode, e => e.r === rid && e.m === m.id);
+  parts.forEach(p => {
+    const n = sum(mode, e => e.r === rid && e.p === p);
     html += `<td class="tot">${n || ''}</td>`;
   });
   html += `<td class="tot">${sum(mode, e => e.r === rid) || ''}</td></tr></tbody>`;
@@ -1067,23 +1075,25 @@ function renderSummaryGrid() {
   const cellHtml = (a, w, bg) => !a && !w ? ''
     : `<div class="cell summary" style="${a ? `background:${bg};color:${textOn(bg)}` : ''}">${pair(a, w)}</div>`;
 
-  let html = '<thead><tr><th class="date">date</th><th>part</th>';
-  cfg.members.forEach(m => {
-    html += `<th><span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}</th>`;
+  // Same axes as the round grid, so switching to All rounds does not reorient the page
+  // under you. A hidden part is marked in its column header rather than per row.
+  let html = '<thead><tr><th class="date">date</th><th>member</th>';
+  parts.forEach(p => {
+    html += `<th>第${p}部${vis.has(p) ? '' : '<span class="hint"> hid</span>'}</th>`;
   });
   html += '<th class="tot">tickets</th></tr></thead><tbody>';
 
   cfg.dates.forEach(d => {
     const dow = dowOf(d.label);
-    parts.forEach((p, pi) => {
-      html += `<tr${pi === 0 ? ' class="date-start"' : ''}>`;
-      if (pi === 0) {
-        html += `<td class="date" rowspan="${parts.length}">${esc(d.label)}`
+    cfg.members.forEach((m, mi) => {
+      html += `<tr${mi === 0 ? ' class="date-start"' : ''}>`;
+      if (mi === 0) {
+        html += `<td class="date" rowspan="${cfg.members.length}">${esc(d.label)}`
              +  (dow ? `<br><span class="hint">${dow}</span>` : '') + '</td>';
       }
-      html += `<td class="part">${p}${vis.has(p) ? '' : '<span class="hint"> hid</span>'}</td>`;
+      html += `<td class="member"><span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}</td>`;
       let rowA = 0, rowW = 0;
-      const cells = cfg.members.map(m => {
+      const cells = parts.map(p => {
         const a = tot(d.id, p, m.id, 'a'), w = tot(d.id, p, m.id, 'w');
         rowA += a; rowW += w;
         return `<td>${cellHtml(a, w, safeColor(m.color))}</td>`;
@@ -1093,8 +1103,8 @@ function renderSummaryGrid() {
   });
 
   html += '<tr><td class="tot" colspan="2">total</td>';
-  cfg.members.forEach(m => {
-    const a = sum('a', e => e.m === m.id), w = sum('w', e => e.m === m.id);
+  parts.forEach(p => {
+    const a = sum('a', e => e.p === p), w = sum('w', e => e.p === p);
     html += `<td class="tot">${a ? pair(a, w) : ''}</td>`;
   });
   const ta = sum('a'), tw = sum('w');
@@ -1123,11 +1133,13 @@ function renderChecklist() {
     total += a;
     rows.push({ d, m, p: +p, a, di: order.has(dId) ? order.get(dId) : Infinity });
   }
-  rows.sort((x, y) => x.di - y.di || x.p - y.p || x.m.name.localeCompare(y.m.name));
+  // Member before part, matching both the grid's rows and the order the ballot is filled
+  // in. Sorting by part first would have the checklist disagree with everything else.
+  rows.sort((x, y) => x.di - y.di || x.m.name.localeCompare(y.m.name) || x.p - y.p);
   const lines = rows.map(x => {
     const dow = dowOf(x.d.label);
-    return `${x.d.label}${dow ? ' (' + dow + ')' : ''}  第${x.p}部  `
-         + `${x.m.name.padEnd(10)} ${x.a}${vis.has(x.p) ? '' : '   ← hidden part'}`;
+    return `${x.d.label}${dow ? ' (' + dow + ')' : ''}  ${x.m.name.padEnd(10)} `
+         + `第${x.p}部  ${x.a}${vis.has(x.p) ? '' : '   ← hidden part'}`;
   });
   document.getElementById('checklist').textContent = lines.length
     ? `${roundName(r)} — ${limitUsedIn(rid)} ${limitNoun()}, `

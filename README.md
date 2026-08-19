@@ -16,7 +16,7 @@ It works equally well saved to disk and opened from `file://`, or served from an
 
 **Rounds.** One tab per application window. Round 1 is a single window; later rounds run the same mechanism several times, so their caps scale — a round can also override the defaults itself.
 
-**The grid.** Dates down, 第N部 within each date, one column per member. Tap a cell to add a ticket, long-press or shift-click to remove. Cells grey out when you hit the round limit, the way the real site does.
+**The grid.** Dates down, one row per member within each date, one column per 部 — the order the forTUNE ballot is filled in: pick the member, then choose parts along the row. Tap a cell to add a ticket, long-press or shift-click to remove. Cells grey out when you hit the round limit, the way the real site does.
 
 **Applied vs won.** Two modes on the same grid. Won can never exceed applied. The "All rounds" tab accumulates everything, with won shown large and applied small beside it.
 
