@@ -1,6 +1,6 @@
 # Miguri Planner — porting and improvement plan
 
-Status as of 2026-08-09.
+Status as of 2026-08-19.
 The app is one self-contained `index.html`, around 1,380 lines, no build step, no dependencies, no server.
 It has been hardened for public use (see "What was already fixed").
 
@@ -163,6 +163,61 @@ The app warns at the top of the page when storage is unavailable or a save has f
 Say the same thing wherever you share the link: the data lives in their browser, and Export JSON is the backup.
 
 That is a real limitation. Someone who clears site data, or opens it in private browsing, or switches phones, loses their plan unless they exported. Decide whether you are comfortable with that before sharing widely — the parked work below is what fixes it.
+
+## Next up — one tab per application window
+
+Decided 2026-08-19, to be done after 第2次 closes. This is a correctness bug, not a feature.
+
+### The bug
+
+An **entry** is a slot within *one application window*, not a slot outright.
+Each window caps at 15 entries and 3 tickets per member per block, so 9 tickets on one block cannot be one entry — it is three, one per window, because no single application could have placed more than 3 there.
+
+`entriesUsedIn()` counts distinct `date+part+member` keys holding tickets.
+That was right when a round *was* one window. With `windows: 3` it collapses three applications into one bucket and counts the bucket once.
+
+Observed during the 18th's 第2次: 99 tickets applied across 18 slots displayed as **18 / 45 entries**.
+99 tickets at 3 per entry cannot be fewer than **33** entries, so real headroom was ~12 while the app showed 27.
+The counter under-reports, which means it greys nothing and lets you plan past the actual limit — the opposite of the failure you want.
+
+### Why it cannot be computed from the current state
+
+Entries store total tickets per slot, never per window.
+Four tickets at a slot is *at least* two entries, but could be two (3+1), two (2+2), or three (2+1+1).
+The distribution was never captured, so it cannot be recovered — only a lower bound, `sum over slots of ceil(tickets / maxTicketsPerWindow)`, is derivable.
+
+### The fix
+
+Make one tab equal one application window and delete the `windows` multiplier entirely.
+
+The multiplier was added to make the 18th's 1 / 3 / 5 structure fit, and it was the wrong lever: it put the app in contradiction with its own Round-section label, which already reads *"one tab per application window"*. Both cannot be true, and the entry counter is where that surfaced.
+
+With one tab per window:
+
+- Every tab is 15 entries and 3 tickets per member per block. No scaling, no derived figures.
+- Entry counting is exact again — distinct slots holding tickets in that tab.
+- Greying at the limit becomes correct rather than approximate.
+- The ✓ held badge keeps working unchanged; it sums wins from earlier tabs either way.
+- The 18th becomes 9 tabs (1 + 3 + 5), which is honest — that is genuinely 9 separate applications.
+
+Round labels carry the naming: `1次`, `2次-1`, `2次-2`, `2次-3`, `3次-1` and so on.
+
+### The hard part: migration
+
+An existing round with `windows: 3` and 9 tickets in a slot has to become three rounds, and how those tickets were split across windows is exactly the information that was never stored.
+Options, none free:
+
+- Distribute greedily — fill window 1 to the cap, then window 2, and so on. Preserves totals and is at least consistent, but it is a guess presented as fact.
+- Leave existing multi-window rounds alone and apply the new model only to rounds created afterwards. No data is invented, at the cost of two kinds of round coexisting.
+- Ask at migration time, per round.
+
+Whichever is chosen: snapshot first so Undo covers it, bump the state version, and test the migration against a real pre-change export rather than a synthetic one.
+
+### Interim, if it is wanted before then
+
+Displaying the lower bound — "at least 33 / 45" — is a small, data-safe change that turns a misleading number into a truthful floor. It does not fix greying, which stays approximate.
+
+Note for whoever does this: the ✓ held badge is *not* affected by any of the above. It derives from recorded wins, which are exact regardless of windows.
 
 ## Parked work
 
