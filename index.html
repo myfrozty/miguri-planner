@@ -73,14 +73,11 @@
   }
   header .spacer { flex: 1; }
   .brand { display: inline-flex; align-items: baseline; gap: 7px; }
-  /* Baseline alignment pins the marker to the title's *first* line, so a wrapped title
-     would strand it halfway up. The title is short enough never to need two lines. */
   .brand h1 { white-space: nowrap; }
   #version {
     font-size: 11px; color: var(--muted);
     font-variant-numeric: tabular-nums; letter-spacing: 0.02em; white-space: nowrap;
   }
-  /* Shrinks on narrow windows but never grows to fill the bar. */
   #singleName { flex: 0 1 240px; min-width: 130px; font-weight: 600; }
   #saveState { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   #saveState .dot {
@@ -132,23 +129,19 @@
   table.grid td.date, table.grid td.part { padding: 5px 12px; font-size: 12px; }
   table.grid td.date { text-align: left; color: var(--muted); }
   table.grid td.part { font-weight: 600; }
-  /* The row label is now a member, so it reads left-aligned beside the date. */
   table.grid td.member { padding: 5px 12px; font-size: 12px; font-weight: 600; text-align: left; }
   table.grid tr.date-start td { border-top: 2px solid var(--border-strong); }
   .cell {
     width: 62px; height: 32px; border: 0; background: var(--cell);
     cursor: pointer; font: inherit; font-weight: 600; font-variant-numeric: tabular-nums;
     display: block; margin: 0 auto;
-    /* Long press is a real gesture here, so suppress the iOS text callout and selection
-       it would otherwise trigger, and drop the 300ms tap delay. */
+    /* Long press is a real gesture here: no iOS callout, no selection, no tap delay. */
     touch-action: manipulation;
     -webkit-touch-callout: none;
     -webkit-user-select: none; user-select: none;
   }
   .cell.filled { color: #1c1c1a; }
-  /* The badge sits in the corner clear of the applied number, so the cell anchors it.
-     .cell.zero paints its text transparent and the badge is a child of it, so the badge
-     needs its own colour or it inherits that invisibility. */
+  /* .cell.zero hides its text, so the badge sets its own colour. */
   .cell { position: relative; }
   .held {
     position: absolute; top: 1px; right: 3px;
@@ -164,9 +157,7 @@
   }
   .cell.summary { cursor: default; line-height: 32px; color: #1c1c1a; }
   .cell.summary:hover { outline: none; }
-  /* On the accumulated view, won is the figure worth reading at a glance — it is how many
-     tickets you actually hold — so it carries the weight and applied sits beside it as the
-     small companion figure. Applies to both cells and totals so the two never disagree. */
+  /* Accumulated view: won is the headline figure, applied its small companion. */
   .pair-a { font-size: 11px; font-weight: 600; opacity: .6; }
   .pair-w { font-size: 15px; font-weight: 700; }
   .pair-w::before { content: '/'; margin: 0 4px; font-size: 11px; font-weight: 600; opacity: .5; }
@@ -189,24 +180,17 @@
   table.stats { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
   table.stats th, table.stats td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--border); }
   table.stats th:first-child, table.stats td:first-child { text-align: left; }
-  /* Labels are single values — a date or a 第N部 — so never break them mid-word.
-     If the column gets too tight the table scrolls inside its own wrapper instead. */
   table.stats th:first-child, table.stats td:first-child { white-space: nowrap; }
   table.stats th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
   table.stats tr.total td { font-weight: 600; border-top: 2px solid var(--border-strong); border-bottom: 0; }
   .stats-scroll { overflow-x: auto; }
-  /* Two fixed rows rather than an auto-fit flow: member+round read together, date+part
-     read together, and the pairing stays put at every width instead of reshuffling.
-     minmax(0, 1fr) — not plain 1fr — lets a column shrink past its table's min-content
-     width, so .stats-scroll scrolls instead of pushing the page sideways. */
+  /* minmax(0, 1fr) lets a column shrink, so .stats-scroll scrolls instead of the page. */
   .stat-rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .stat-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-  /* Both levels: a grid item defaults to min-width:auto, so it refuses to shrink past its
-     table's min-content width and overflows the track no matter how the track is sized. */
+  /* Grid items default to min-width:auto and would refuse to shrink. */
   .stat-rows > *, .stat-row > * { min-width: 0; }
   .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; vertical-align: baseline; }
-  /* A native colour input, sized down to read as a swatch. The vendor pseudo-elements are
-     the only way to remove the default inset padding and border around the colour area. */
+  /* A native colour input styled as a swatch. */
   input[type=color].swatch-pick {
     -webkit-appearance: none; appearance: none;
     width: 28px; height: 28px; padding: 0; flex: none;
@@ -235,9 +219,7 @@
   details[open] > summary { margin-bottom: 12px; }
 
   @media (max-width: 760px) {
-    /* Wrapped to roughly four rows on a phone, and being sticky it stayed there —
-       around 340px of an 812px screen, permanently, while scrolling the grid.
-       Let it scroll away, and drop the status text to its dot. */
+    /* Not sticky on phones: wrapped, it would cover a large part of the screen. */
     header { padding: 10px 14px; gap: 8px 10px; position: static; }
     header .spacer { display: none; }        /* let the buttons wrap under the title */
     #saveText { display: none; }
@@ -251,12 +233,9 @@
     .round-cfg { gap: 12px; }
     .cfg-grid { grid-template-columns: 1fr; }
     .list-item { flex-wrap: wrap; }
-    /* Side by side, each table is narrower than its six columns and both scroll at once,
-       which is unreadable on a phone. Stack instead and keep the member/round then
-       date/part order, so the same pairs still sit next to each other vertically. */
+    /* Stack the stat tables, keeping member/round and date/part paired. */
     .stat-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
     .stat-rows { gap: 14px; }
-    /* Tighten the stat tables so applied, won and rate sit on screen side by side. */
     table.stats th, table.stats td { padding: 6px 6px; }
     table.stats th { font-size: 10px; letter-spacing: 0.03em; }
   }
@@ -392,13 +371,8 @@ const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
 const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-/* The 18th's miguri lineup: the official roster minus 山口陽世, who is not appearing for
-   this single or later ones. Deliberately the event lineup and not the artist page —
-   those differ, and a picker that offers someone you cannot apply to is worse than free
-   text, because it looks authoritative.
-   Baked in rather than fetched: there is no backend, and this only ever *seeds* two
-   editable fields, so when the lineup next changes nobody is stuck — they type a name.
-   Shorthand is the surname in romaji, a starting point that stays editable. */
+/* The 18th's miguri lineup (the event lineup, not the artist page). It only seeds
+   editable fields, so a later lineup change never blocks anyone. */
 const ROSTER = [
   ['二期生', [['金村美玖', 'kanemura'], ['小坂菜緒', 'kosaka']]],
   ['三期生', [['上村ひなの', 'kamimura'], ['髙橋未来虹', 'takahashi'], ['森本茉莉', 'morimoto']]],
@@ -420,9 +394,7 @@ const ALL = '__all__';
 const isColor = c => /^#[0-9a-f]{3,8}$/i.test(String(c || ''));
 const safeColor = c => isColor(c) ? String(c) : PALETTE[0];
 const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
-/* uid() emits [0-9a-z]{1,7}. Ids also land in HTML attributes, so keep them to characters
-   that cannot terminate one — and reject rather than rewrite, because rewriting an id
-   orphans every entry that referenced it. */
+/* Ids land in HTML attributes. Reject unsafe ones: rewriting would orphan their entries. */
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /* Day of week from an ISO date, parsed as local time so it never slips a day. */
@@ -447,20 +419,13 @@ function defaultState() {
   return {
     version: 3,
     config: {
-      // The single and its dates are public schedule information, identical for everyone
-      // planning this round, so they ship preloaded. Members stay blank on purpose: who
-      // you are applying for is the personal part, and nobody should open this and find
-      // somebody else's list already filled in.
-      // All six announced dates are Sundays.
+      // The schedule is public, so it ships preloaded. Members are personal and start blank.
       singleName: '18th single「イチャイチャ虫」',
       blocksPerRound: 15,
       maxTickets: 3,
       laterRoundWindows: 3,
       limitUnit: 'entries',
       allParts: [1, 2, 3, 4, 5, 6],
-      // All six on by default. Hiding some is a personal preference and belongs in
-      // Settings; shipping with 1, 5 and 6 hidden meant anyone who never opened Settings
-      // would plan around three slots without learning the other three existed.
       // 18th times: 第1部 10:45, 第2部 12:15, 第3部 13:45, 第4部 15:45, 第5部 17:15, 第6部 18:45.
       visibleParts: [1, 2, 3, 4, 5, 6],
       dates: [
@@ -473,11 +438,8 @@ function defaultState() {
       ],
       members: [{ id: uid(), name: 'member', jp: '', color: PALETTE[0] }]
     },
-    // The 18th does not scale uniformly: 第1次 is one application, 第2次 allows 3 per
-    // person and 第3次 allows 5. laterRoundWindows is a single number and cannot express
-    // that, so the three rounds ship with explicit window counts. Each application carries
-    // its own 1人15種類 / 1種あたり3枚 limit, which is exactly what a window means here —
-    // so 第3次 is 15 x 5 = 75 entries and 3 x 5 = 15 tickets per member per block.
+    // 第1次 is one application, 第2次 allows 3 and 第3次 allows 5, each with its own
+    // 1人15種類 / 1種あたり3枚 limit.
     rounds: [
       { id: uid(), num: 1, label: '', blocks: null, maxTickets: null, windows: 1 },
       { id: uid(), num: 2, label: '', blocks: null, maxTickets: null, windows: 3 },
@@ -500,12 +462,7 @@ const storageOK = (() => {
 })();
 let startupError = '';
 
-/* Declared here, loaded at the very bottom. Calling load() at this point instead meant
-   migrate() ran while consts declared further down were still in their temporal dead
-   zone: every startup threw ReferenceError, load()'s catch reported it as a console
-   warning nobody sees, and the first render autosaved defaults over the real data — so
-   the app silently lost everything on reload while claiming to autosave. Initialising
-   after every declaration in the file makes that whole class of bug unreachable. */
+/* Loaded at the very bottom, once every const below is declared. */
 let S;
 
 function load() {
@@ -524,11 +481,7 @@ function load() {
   }
 }
 
-/* Rejects anything that is not a planner backup instead of repairing it into one.
-   migrate() used to do both, which is how a file with no "dates" key destroyed data: the
-   default dates were merged in carrying fresh uid()s, every entry still pointed at the
-   old ids, and purge() then deleted the lot — displayed as a normal, empty planner.
-   Refusing the file outright leaves the user's existing data untouched. */
+/* Rejects anything that is not a planner backup rather than repairing it into an empty one. */
 function validate(s) {
   if (!isObj(s)) throw new Error('not a planner backup — expected a JSON object');
   const c = s.config;
@@ -570,17 +523,13 @@ function hasSnapshot() {
 function migrate(s) {
   const d = defaultState();
   const incoming = s.config || {};
-  // v1 called rounds "waves", named the block cap "blocksPerWave", and stored a
-  // manual day-of-week per date. Read the old keys before defaults are merged in,
-  // otherwise the default would mask a missing new key and the old value be lost.
+  // v1 names. Read them before defaults are merged in, or the defaults would mask them.
   const legacyBlocks = incoming.blocksPerRound == null ? incoming.blocksPerWave : null;
   s.config = Object.assign({}, d.config, incoming);
   if (legacyBlocks != null) s.config.blocksPerRound = legacyBlocks;
   delete s.config.blocksPerWave;
 
-  // Parts are compared numerically everywhere (Set membership, +p from entry keys), so a
-  // backup carrying them as strings would give duplicate By-part rows and make the
-  // hidden-part checks miss. Coerce, drop junk, dedupe, and fall back if nothing survives.
+  // Parts are compared as numbers everywhere, so coerce, drop junk and dedupe.
   const partList = (v, fb) => {
     const nums = [...new Set((Array.isArray(v) ? v : []).map(Number).filter(Number.isFinite))];
     return nums.length ? nums.sort((a, b) => a - b) : fb.slice();
@@ -601,16 +550,9 @@ function migrate(s) {
   s.config.dates = (s.config.dates || []).map(x => ({ id: x.id || uid(), label: x.label || '' }));
   s.config.members = (s.config.members || []).map((m, i) => ({
     id: m.id || uid(), name: m.name || 'member', jp: m.jp || '',
-    // Test validity directly. Comparing safeColor's output to PALETTE[0] cannot tell a
-    // fallback apart from a member legitimately set to that colour, and would reassign it.
     color: isColor(m.color) ? String(m.color) : PALETTE[i % PALETTE.length]
   }));
-  // A round missing a usable num poisons Math.max in "+ round" and yields "Round NaN"
-  // forever, so fall back to position rather than trusting the file.
-  // Per-round overrides were passed through untouched. capBlocks/capTickets feed them
-  // straight into innerHTML and into `used >= cap`, so a string override both injected
-  // markup and disabled the limit silently — NaN comparisons are always false, so no cell
-  // ever greyed out. Anything not a positive whole number means "no override".
+  // Anything not a positive whole number means "no override".
   const posIntOrNull = v => (v == null || v === '') ? null
     : (Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : null);
   s.rounds = (s.rounds && s.rounds.length ? s.rounds : d.rounds).map((r, i) => ({
@@ -622,10 +564,7 @@ function migrate(s) {
     windows: posIntOrNull(r.windows)
   }));
 
-  // Entry values reach arithmetic in sum(), which uses +=. A string sneaks through `|| 0`
-  // and turns the running total into concatenation ("0" + "3" + "2" = "032"); a primitive
-  // makes get() return a non-object and the click handler's property write throw under
-  // 'use strict'. Coerce to whole non-negative counts and drop whatever cannot be one.
+  // Coerce to whole non-negative counts and drop whatever cannot be one.
   const count = v => { const n = Math.floor(+v); return Number.isFinite(n) && n > 0 ? n : 0; };
   const clean = {};
   for (const k in (s.entries || {})) {
@@ -639,9 +578,7 @@ function migrate(s) {
   }
   s.entries = clean;
   s.mode = s.mode || 'a';
-  // v2 guessed the round limit was counted in blocks. forTUNE actually greys out at
-  // 15 line items, so entries is the real unit. Flip once, on the v2 -> v3 hop only,
-  // so a later deliberate change to blocks is not stomped on every load.
+  // Entries became the limit unit in v3. Flip once, so a later choice of blocks sticks.
   if ((s.version || 1) < 3) s.config.limitUnit = 'entries';
   s.version = 3;
   // ALL is a valid selection even though it matches no round.
@@ -670,8 +607,7 @@ function save() {
   }
 }
 
-/* The header dot is easy to miss, and it is hidden entirely on a phone. Anything that
-   means "your data is not actually safe" gets said in full, at the top of the page. */
+/* The header dot is hidden on phones, so data-safety problems are spelled out here. */
 function renderNotices() {
   const out = [];
   if (!storageOK) {
@@ -702,8 +638,7 @@ function set(r, d, p, m, field, val) {
   const k = ekey(r, d, p, m);
   const cur = S.entries[k] || { a: 0, w: 0 };
   cur[field] = val;
-  // You cannot win more tickets than you applied for, so lowering applied drags won
-  // down with it. Without this, {a:1, w:3} is reachable and the stats show 300%.
+  // Won can never exceed applied.
   if (cur.w > cur.a) cur.w = cur.a;
   if (cur.a === 0 && cur.w === 0) delete S.entries[k];
   else S.entries[k] = cur;
@@ -730,10 +665,8 @@ function blocksUsedIn(roundId) {
   return seen.size;
 }
 
-/* Line items: date+part+member, matching how the receipt itemises an order.
-   One application window takes at most config.maxTickets on a slot, so a slot holding more
-   is spread over several windows and is one line on each receipt: 5 tickets at a cap of 3
-   is 2 entries, not 1. Counting it once is what showed a full 第2次 as 24 / 45. */
+/* Receipt lines. A slot holding more than one window's cap spans several windows,
+   one line each: 5 tickets at a cap of 3 is 2 entries. */
 const entriesFor = a => a > 0 ? Math.ceil(a / S.config.maxTickets) : 0;
 function entriesUsedIn(roundId) {
   let n = 0;
@@ -753,9 +686,7 @@ const isSummary = () => S.activeRound === ALL;
 
 const activeRound = () => S.rounds.find(r => r.id === S.activeRound);
 const roundName = r => r.label ? `Round ${r.label}` : `Round ${r.num}`;
-/* A round is one or more application windows. Round 1 is a single window; later rounds
-   run the same mechanism three times, so their caps scale with it: 3 x 15 entries and
-   3 x 3 tickets per member per block. An explicit per-round value always wins. */
+/* Caps scale with the round's windows. An explicit per-round value wins. */
 function windowsOf(r) {
   if (Number.isFinite(+r.windows) && +r.windows > 0) return Math.floor(+r.windows);
   return S.rounds.indexOf(r) === 0 ? 1 : S.config.laterRoundWindows;
@@ -766,9 +697,7 @@ const visibleParts = () => S.config.visibleParts.slice().sort((a, b) => a - b);
 const dateById = id => S.config.dates.find(d => d.id === id);
 const memberById = id => S.config.members.find(m => m.id === id);
 
-/* visibleParts hides rows of the entry grid and nothing else. Allocations in a hidden
-   part are still real applications against the real forTUNE limit, so they keep counting
-   everywhere that reports truth. This surfaces them so a lockout is never mysterious. */
+/* Hidden parts still count against the limit, so surface them. */
 function hiddenInRound(rid) {
   const vis = new Set(S.config.visibleParts);
   let entries = 0, tickets = 0;
@@ -791,34 +720,20 @@ function partsInUse() {
   return [...seen].sort((a, b) => a - b);
 }
 
-
-/* Tickets already won at this exact date+part+member in the rounds BEFORE the one being
-   viewed — what was in hand going into it. That is the number you allocate against: seeing
-   2 already won on a slot is what tells you to top it up rather than start somewhere new.
-   Deliberately not every round. Counting all of them replays the current round's own
-   results back at you, which the won tab already shows, so round 1 filled up with badges
-   that meant nothing. Earlier-rounds-only makes round 1 silent, which is the truth. */
+/* Tickets already won on this slot in earlier rounds. */
 function heldAt(dId, p, mId) {
   const before = S.rounds.slice(0, S.rounds.indexOf(activeRound()));
   return before.reduce((n, r) => n + get(r.id, dId, p, mId).w, 0);
 }
 
-/* <input type="color"> accepts only #rrggbb, so widen a 3-digit hex and drop any alpha
-   instead of letting the control silently fall back to black on an older saved colour. */
+/* <input type="color"> accepts only #rrggbb. */
 function hex6(c) {
   const h = safeColor(c).replace('#', '');
   const full = h.length === 3 ? h.split('').map(x => x + x).join('') : h.slice(0, 6).padEnd(6, '0');
   return '#' + full.toLowerCase();
 }
 
-/* Members choose their own colour now, so any background is reachable and the ticket count
-   sits directly on it. Pick the text from the background's WCAG relative luminance rather
-   than leaving someone with black-on-navy.
-   Pure black and white, not the theme's softer #1c1c1a / #f7f7f4: with only two text
-   colours the worst case is the background where both are equally legible, and softening
-   either one drags that worst case below the 4.5:1 AA floor — a saturated red like
-   #e12d0f fell to 3.73:1. Pure black/white puts the floor at 4.58:1.
-   0.179 is where the two are equal, so it is the threshold that maximises that floor. */
+/* Black or white text by WCAG luminance. 0.179 is where both contrast equally. */
 function textOn(bg) {
   const h = hex6(bg).slice(1);
   const chan = i => {
@@ -914,15 +829,13 @@ function renderBudget() {
   const won = sum('w', e => e.r === rid);
   const overLimit = capped > maxBlocks;
 
-  // Only the unit the round limit is counted against; the other is noise.
   const cappedLabel = limitsEntries() ? 'Entries' : 'Blocks';
 
   document.getElementById('budget').innerHTML = [
     stat(cappedLabel, `${capped}<small> / ${maxBlocks}</small>`, capped / maxBlocks, overLimit),
     stat('Tickets applied', applied, null, false),
     stat('Tickets won', won, null, false),
-    // This round's own wins are 0 mid-application — correct, but not the number you need.
-    // Same rule as the badges: what was in hand before this round started.
+    // What was in hand before this round started.
     stat('Held going in', (() => {
       const before = new Set(S.rounds.slice(0, S.rounds.indexOf(r)).map(x => x.id));
       return sum('w', e => before.has(e.r));
@@ -956,8 +869,7 @@ function renderBudget() {
     + notes.map(n => `<div class="alert note">${esc(n)}</div>`).join('');
 }
 
-/* No cap here: the round limit is per round, so an accumulated total has nothing to
-   measure against. Just the running position across the whole single. */
+/* No cap here: the limit is per round. */
 function renderSummaryBudget() {
   const applied = sum('a');
   const won = sum('w');
@@ -988,20 +900,14 @@ function renderGrid() {
   const rid = r.id;
   const maxTix = capTickets(r);
   const parts = visibleParts();
-  // Named `mode`, not `field`: as `field` it shadowed the module-level field(label, input)
-  // builder for this whole function, so any future call to it here would throw.
   const mode = S.mode;
 
-  // Rows are date x member, columns are 第N部 — the order the forTUNE ballot is filled in:
-  // choose the member, then pick parts along the row. Storage is a flat
-  // round|date|part|member map with no notion of rows or columns, so this is only how the
-  // same data is drawn; nothing about it is persisted and the axes could swap back freely.
+  // Rows are date x member, columns are 第N部: the order the forTUNE ballot is filled in.
   let html = '<thead><tr><th class="date">date</th><th>member</th>';
   parts.forEach(p => { html += `<th>第${p}部</th>`; });
   html += '<th class="tot">tickets</th></tr></thead><tbody>';
 
-  // At the limit forTUNE greys out the slots you can no longer take, so do the same.
-  // Only in applied mode: recording a win is a fact and must never be blocked.
+  // Grey out at the limit like forTUNE. Never in won mode: a win is a fact.
   const atLimit = mode === 'a' && limitUsedIn(rid) >= capBlocks(r);
 
   cfg.dates.forEach(d => {
@@ -1019,9 +925,6 @@ function renderGrid() {
         const v = e[mode];
         rowTotal += v;
         const over = mode === 'a' && v > maxTix;
-        // A block is one date+part whichever way the grid is drawn. It used to be one row,
-        // so this was computed once per row; now a row spans every part, making it a
-        // per-cell question instead.
         const blockOpen = cfg.members.some(x => get(rid, d.id, p, x.id).a > 0);
         // In entries, the next ticket costs a line whenever the slot's windows are all full.
         const wouldCost = limitsEntries() ? v % cfg.maxTickets === 0 : !blockOpen;
@@ -1031,16 +934,9 @@ function renderGrid() {
         const why = mode === 'a'
           ? `Round limit of ${capBlocks(r)} ${limitNoun()} reached`
           : 'No tickets applied here';
-        // The button's only text is a number, and at zero it is transparent, so without
-        // this a screen reader reads the entire grid as an undifferentiated run of "0".
-        // Applied mode only: in won mode the cell *is* the won figure, so a second one
-        // beside it would say the same thing twice.
+        // Applied mode only: in won mode the cell already is the won figure.
         const held = mode === 'a' ? heldAt(d.id, p, m.id) : 0;
-        // Holding tickets somewhere you are not applying this round is worth seeing, so an
-        // otherwise-empty cell gets a ring in the member's own colour. A translucent fill
-        // was tried first and composited to mud over the dark theme — a yellow pastel at
-        // 22% became rgb(83,75,63), only 1.6:1 against an empty cell. A ring keeps the
-        // palette colour at full saturation and reads the same in either theme.
+        // An empty cell where you already hold tickets gets a ring in the member's colour.
         const ring = !v && held ? `box-shadow:inset 0 0 0 2px ${safeColor(m.color)};` : '';
         const aria = `${m.name}, ${d.label || 'date not set'} 第${p}部, `
                    + `${v || 0} ${mode === 'a' ? 'applied' : 'won'}`
@@ -1053,7 +949,6 @@ function renderGrid() {
           + (held ? `<span class="held"${v ? ` style="color:${textOn(m.color)}"` : ''}>✓${held}</span>` : '')
           + `</button></td>`;
       });
-      // The row now spans parts, so this is what that member is doing on that date.
       html += `<td class="tot">${rowTotal || ''}</td></tr>`;
     });
   });
@@ -1072,10 +967,7 @@ function renderGrid() {
       const cell = get(rid, d, +p, m);
       const cur = cell[mode];
       const max = mode === 'a' ? maxTix : cell.a;   // wins are bounded by applications
-      // At the round limit a filled cell stays tappable so it can come down, but going past a
-      // multiple of the per-window cap would open another entry. Stop there rather than wrap:
-      // wrapping is how a cell at its own cap is cleared, and here it would silently drop
-      // tickets the user never meant to touch.
+      // At the limit, stop rather than open another entry. Wrapping to 0 would drop tickets.
       if (!down && mode === 'a' && atLimit && limitsEntries()
           && cur < max && cur >= entriesFor(cur) * S.config.maxTickets) return;
       // A cell can sit above the cap after an import or a cap change. Stepping up brings
@@ -1085,8 +977,7 @@ function renderGrid() {
       set(rid, d, +p, m, mode, next);
       render();
     };
-    // A phone has no shift key, and the only way down was to tap up until the value
-    // wrapped past the cap. Long press is the touch equivalent of shift-click.
+    // Long press is the touch equivalent of shift-click.
     let timer = null, longFired = false;
     const cancel = () => { clearTimeout(timer); timer = null; };
     btn.addEventListener('pointerdown', () => {
@@ -1112,8 +1003,7 @@ function renderSummaryGrid() {
   const cellHtml = (a, w, bg) => !a && !w ? ''
     : `<div class="cell summary" style="${a ? `background:${bg};color:${textOn(bg)}` : ''}">${pair(a, w)}</div>`;
 
-  // Same axes as the round grid, so switching to All rounds does not reorient the page
-  // under you. A hidden part is marked in its column header rather than per row.
+  // Same axes as the round grid. Hidden parts are marked in the header.
   let html = '<thead><tr><th class="date">date</th><th>member</th>';
   parts.forEach(p => {
     html += `<th>第${p}部${vis.has(p) ? '' : '<span class="hint"> hid</span>'}</th>`;
@@ -1170,8 +1060,7 @@ function renderChecklist() {
     total += a;
     rows.push({ d, m, p: +p, a, di: order.has(dId) ? order.get(dId) : Infinity });
   }
-  // Member before part, matching both the grid's rows and the order the ballot is filled
-  // in. Sorting by part first would have the checklist disagree with everything else.
+  // Date, member, part: the order the ballot is filled in.
   rows.sort((x, y) => x.di - y.di || x.m.name.localeCompare(y.m.name) || x.p - y.p);
   const lines = rows.map(x => {
     const dow = dowOf(x.d.label);
@@ -1280,17 +1169,13 @@ function renderSettings() {
   const ml = document.getElementById('cfgMembers');
   ml.innerHTML = '';
   cfg.members.forEach(m => {
-    // Was a swatch that cycled through PALETTE, which meant a colour outside those eight
-    // was unreachable. PALETTE now only seeds a new member with a sensible starting point.
     const sw = document.createElement('input');
     sw.type = 'color';
     sw.className = 'swatch-pick';
     sw.value = hex6(m.color);
     sw.title = 'pick this member’s colour';
     sw.setAttribute('aria-label', `colour for ${m.name || 'this member'}`);
-    // input fires continuously while dragging inside the picker; change fires on commit.
-    // Record on both, repaint on commit only — a full grid re-render per pixel of drag is
-    // wasted work, and the control already previews the colour while you choose.
+    // Repaint on commit only; input fires on every step of a drag.
     sw.oninput = () => { m.color = sw.value; };
     sw.onchange = () => { m.color = sw.value; render(); };
     ml.appendChild(listItem([
@@ -1337,9 +1222,7 @@ function renderMemberPicker() {
     const v = add.value;
     if (!v) return;
     const chosen = add.selectedOptions[0];
-    // A fresh browser starts on one untouched placeholder. Fill that in on the first pick
-    // instead of leaving a stray empty "member" column beside the real one — it cannot be
-    // deleted anyway while it is the only row.
+    // Fill in the untouched starter placeholder instead of adding beside it.
     const only = cfg.members.length === 1 ? cfg.members[0] : null;
     const blank = only && only.name === 'member' && !only.jp
       && !Object.keys(S.entries).some(k => k.split('|')[3] === only.id);
@@ -1400,10 +1283,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 /* ---------- export ---------- */
 
-/* The BOM is here for Excel, which otherwise reads a UTF-8 CSV as mojibake. It has no
-   business in the JSON backup: browsers strip it on re-import so the app's own round trip
-   hid the problem, but jq and Python's json.load both reject a BOM-prefixed file, and that
-   backup is the one thing users are told to keep. */
+/* The BOM is for Excel only; JSON tools reject it. */
 function download(name, text, type, bom) {
   const blob = new Blob([(bom ? '﻿' : '') + text], { type: (type || 'text/plain') + ';charset=utf-8' });
   const a = document.createElement('a');
@@ -1412,9 +1292,7 @@ function download(name, text, type, bom) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-/* Numbers pass through as themselves. Everything else is free text that a spreadsheet
-   will evaluate as a formula if it opens with =, +, -, @ or a control character, so those
-   get a leading apostrophe — the value still reads correctly, it just is not executed. */
+/* Text a spreadsheet would run as a formula gets a leading apostrophe. */
 const q = v => {
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   let s = String(v == null ? '' : v);
@@ -1428,9 +1306,6 @@ function exportRecords() {
                  'applied', 'won']];
   S.rounds.forEach(r => {
     cfg.dates.forEach(d => {
-      // partsInUse(), not allParts: every other reporting path uses it so that an
-      // allocation in a part the config has since forgotten still shows up. The CSV was
-      // the one place that silently dropped those rows.
       partsInUse().forEach(p => {
         cfg.members.forEach(m => {
           const e = get(r.id, d.id, p, m.id);
@@ -1445,8 +1320,7 @@ function exportRecords() {
   download('records.csv', rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv', true);
 }
 
-/* Shared by both replace-everything paths. Says what is actually in the incoming data,
-   because "Replace all current data?" gave no way to notice the wrong file until after. */
+/* Shows what the incoming data holds, so a wrong file is noticed before it replaces anything. */
 function confirmReplace(next, what) {
   const n = Object.keys(next.entries).length;
   return confirm(`Replace everything in this browser with ${what}?\n\n`
@@ -1480,12 +1354,7 @@ document.getElementById('btnDelRound').onclick = () => {
 document.getElementById('modeA').onclick = () => { S.mode = 'a'; render(); };
 document.getElementById('modeW').onclick = () => { S.mode = 'w'; render(); };
 
-/* min="1" on a bare input is advisory: the element reports :invalid but its value still
-   reads back as typed, so `+value || 1` cheerfully stored -3. A negative cap then reaches
-   capTickets, the click handler writes a negative ticket count that set() will not delete
-   because it is not zero, and every total and the checklist follow it
-   down. Clamp on the way in, and write the clamped number back so the field agrees.
-   The numInput widgets in the round bar already did this — these did not. */
+/* min="1" is only advisory, so clamp and write the clamped value back. */
 function bindNum(id, min, apply) {
   const el = document.getElementById(id);
   el.onchange = () => {
@@ -1505,8 +1374,7 @@ document.getElementById('btnAddDate').onclick = () => {
   S.config.dates.push({ id: uid(), label: '' });
   render();
 };
-// Adding a member is wired inside renderMemberPicker(), since the <select> is rebuilt on
-// every render to drop whoever has already been added.
+// Adding a member is wired in renderMemberPicker(), which rebuilds the <select>.
 
 document.getElementById('btnExportCsv').onclick = exportRecords;
 document.getElementById('btnExportJson').onclick = () =>
@@ -1521,13 +1389,11 @@ document.getElementById('btnImportJson').onclick = () => {
     const fr = new FileReader();
     fr.onload = () => {
       try {
-        // validate() first: it rejects a file that is not a planner backup instead of
-        // letting migrate() repair it into an empty one over the top of real data.
         const next = migrate(validate(JSON.parse(fr.result)));
         if (!confirmReplace(next, 'this file')) return;
         snapshot();
         S = next;
-        purge();   // same cleanup every in-app delete does: drop orphaned entries
+        purge();
         render();
       } catch (e) { alert('Could not read that file:\n\n' + e.message); }
     };
@@ -1560,19 +1426,12 @@ document.getElementById('btnUndo').onclick = () => {
   } catch (e) { alert('That saved copy could not be restored:\n\n' + e.message); }
 };
 
-/* Asks the browser to exempt this origin from routine eviction. Best-effort — Safari may
-   decline, and it is no substitute for a code or a JSON backup, which is why the notice
-   below tells people to take one. */
+/* Best-effort request to exempt this origin from eviction. No substitute for a backup. */
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {});
 }
 
-/* APP_VERSION is bumped by hand and will eventually be forgotten, and a version marker
-   that lies is worse than none. So the date beside it comes from document.lastModified —
-   the Last-Modified header GitHub Pages sends for this exact file — which cannot drift.
-   It also reports the build the user is genuinely running rather than the newest one,
-   because a cached copy carries its own header. Opened from disk it falls back to the
-   saved file's own timestamp, which is still the right answer. */
+/* The date comes from document.lastModified, so unlike APP_VERSION it cannot go stale. */
 (() => {
   const el = document.getElementById('version');
   const d = new Date(document.lastModified);
