@@ -287,7 +287,7 @@
   <section>
     <div class="sec-head">
       <h2>Round</h2>
-      <span class="hint">one tab per application window</span>
+      <span class="hint">one tab per 次 — windows is how many applications you use in it</span>
     </div>
     <div class="row">
       <div class="rounds" id="roundTabs"></div>
@@ -389,7 +389,7 @@
 
 /* Release name, bumped by hand when something notable ships. Never derive the storage KEY
    from it — KEY changing is what silently orphans everyone's saved plan. */
-const APP_VERSION = 'v1.2';
+const APP_VERSION = 'v1.2.1';
 
 const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
@@ -735,12 +735,16 @@ function blocksUsedIn(roundId) {
   return seen.size;
 }
 
-/* Line items: date+part+member, matching how the receipt itemises an order. */
+/* Line items: date+part+member, matching how the receipt itemises an order.
+   One application window takes at most config.maxTickets on a slot, so a slot holding more
+   is spread over several windows and is one line on each receipt: 5 tickets at a cap of 3
+   is 2 entries, not 1. Counting it once is what showed a full 第2次 as 24 / 45. */
+const entriesFor = a => a > 0 ? Math.ceil(a / S.config.maxTickets) : 0;
 function entriesUsedIn(roundId) {
   let n = 0;
   for (const k in S.entries) {
     if (k.split('|')[0] !== roundId) continue;
-    if ((S.entries[k].a || 0) > 0) n++;
+    n += entriesFor(S.entries[k].a || 0);
   }
   return n;
 }
@@ -777,7 +781,7 @@ function hiddenInRound(rid) {
     const [r, , p] = k.split('|');
     if (r !== rid || vis.has(+p)) continue;
     const a = S.entries[k].a || 0;
-    if (a > 0) { entries++; tickets += a; }
+    if (a > 0) { entries += entriesFor(a); tickets += a; }
   }
   return { entries, tickets };
 }
@@ -968,7 +972,7 @@ function renderSummaryBudget() {
   const applied = sum('a');
   const won = sum('w');
   let entries = 0;
-  for (const k in S.entries) if ((S.entries[k].a || 0) > 0) entries++;
+  for (const k in S.entries) entries += entriesFor(S.entries[k].a || 0);
 
   document.getElementById('budget').innerHTML = [
     stat('Rounds', S.rounds.length, null, false),
@@ -1031,7 +1035,8 @@ function renderGrid() {
         // so this was computed once per row; now a row spans every part, making it a
         // per-cell question instead.
         const blockOpen = cfg.members.some(x => get(rid, d.id, p, x.id).a > 0);
-        const wouldCost = limitsEntries() || !blockOpen;
+        // In entries, the next ticket costs a line whenever the slot's windows are all full.
+        const wouldCost = limitsEntries() ? v % cfg.maxTickets === 0 : !blockOpen;
         // Applied: shut once the round limit is spent. Won: shut where nothing was
         // applied, since a win there is impossible.
         const shut = mode === 'a' ? (atLimit && v === 0 && wouldCost) : e.a === 0;
@@ -1079,6 +1084,12 @@ function renderGrid() {
       const cell = get(rid, d, +p, m);
       const cur = cell[mode];
       const max = mode === 'a' ? maxTix : cell.a;   // wins are bounded by applications
+      // At the round limit a filled cell stays tappable so it can come down, but going past a
+      // multiple of the per-window cap would open another entry. Stop there rather than wrap:
+      // wrapping is how a cell at its own cap is cleared, and here it would silently drop
+      // tickets the user never meant to touch.
+      if (!down && mode === 'a' && atLimit && limitsEntries()
+          && cur < max && cur >= entriesFor(cur) * S.config.maxTickets) return;
       // A cell can sit above the cap after an import or a cap change. Stepping up brings
       // it down to the cap rather than wiping the value; stepping down goes by one.
       let next = down ? cur - 1 : (cur > max ? max : (cur >= max ? 0 : cur + 1));
