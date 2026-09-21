@@ -256,9 +256,7 @@
        date/part order, so the same pairs still sit next to each other vertically. */
     .stat-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
     .stat-rows { gap: 14px; }
-    /* Six columns of yen figures do not fit a phone. Tighten them so the numbers that get
-       read most — applied, won, rate — land on screen, and leave committed/paid to the
-       panel's own sideways scroll rather than dropping them. */
+    /* Tighten the stat tables so applied, won and rate sit on screen side by side. */
     table.stats th, table.stats td { padding: 6px 6px; }
     table.stats th { font-size: 10px; letter-spacing: 0.03em; }
   }
@@ -340,7 +338,6 @@
           </label>
           <label><div class="k">Max tickets / member / block</div><input type="number" min="1" id="cfgMaxTickets"></label>
           <label><div class="k">Windows in rounds after the first</div><input type="number" min="1" id="cfgWindows"></label>
-          <label><div class="k">Unit price (yen)</div><input type="number" min="0" step="100" id="cfgPrice"></label>
         </div>
         <p class="hint" style="margin:-6px 0 18px; max-width:80ch">
           An <b>entry</b> is one member in one 第N部 on one date — one line on the receipt.
@@ -456,7 +453,6 @@ function defaultState() {
       // somebody else's list already filled in.
       // All six announced dates are Sundays.
       singleName: '18th single「イチャイチャ虫」',
-      unitPrice: 1200,
       blocksPerRound: 15,
       maxTickets: 3,
       laterRoundWindows: 3,
@@ -596,8 +592,7 @@ function migrate(s) {
   s.config.blocksPerRound = posInt(s.config.blocksPerRound, d.config.blocksPerRound);
   s.config.maxTickets = posInt(s.config.maxTickets, d.config.maxTickets);
   s.config.laterRoundWindows = posInt(s.config.laterRoundWindows, d.config.laterRoundWindows);
-  s.config.unitPrice = Number.isFinite(+s.config.unitPrice) && +s.config.unitPrice >= 0
-    ? Math.floor(+s.config.unitPrice) : d.config.unitPrice;
+  delete s.config.unitPrice;
   if (s.config.limitUnit !== 'blocks' && s.config.limitUnit !== 'entries') {
     s.config.limitUnit = d.config.limitUnit;
   }
@@ -796,7 +791,6 @@ function partsInUse() {
   return [...seen].sort((a, b) => a - b);
 }
 
-const yenStr = n => '¥' + (n || 0).toLocaleString();
 
 /* Tickets already won at this exact date+part+member in the rounds BEFORE the one being
    viewed — what was in hand going into it. That is the number you allocate against: seeing
@@ -918,7 +912,6 @@ function renderBudget() {
   const maxTix = capTickets(r);
   const applied = sum('a', e => e.r === rid);
   const won = sum('w', e => e.r === rid);
-  const yen = applied * S.config.unitPrice;
   const overLimit = capped > maxBlocks;
 
   // Only the unit the round limit is counted against; the other is noise.
@@ -933,9 +926,7 @@ function renderBudget() {
     stat('Held going in', (() => {
       const before = new Set(S.rounds.slice(0, S.rounds.indexOf(r)).map(x => x.id));
       return sum('w', e => before.has(e.r));
-    })(), null, false),
-    stat('Committed', yenStr(yen), null, false),
-    stat('Paid', yenStr(won * S.config.unitPrice), null, false)
+    })(), null, false)
   ].join('');
 
   const alerts = [];
@@ -968,7 +959,6 @@ function renderBudget() {
 /* No cap here: the round limit is per round, so an accumulated total has nothing to
    measure against. Just the running position across the whole single. */
 function renderSummaryBudget() {
-  const price = S.config.unitPrice;
   const applied = sum('a');
   const won = sum('w');
   let entries = 0;
@@ -979,9 +969,7 @@ function renderSummaryBudget() {
     stat('Entries', entries, null, false),
     stat('Tickets applied', applied, null, false),
     stat('Tickets won', won, null, false),
-    stat('Win rate', rate(won, applied) || '—', null, false),
-    stat('Committed', yenStr(applied * price), null, false),
-    stat('Paid', yenStr(won * price), null, false)
+    stat('Win rate', rate(won, applied) || '—', null, false)
   ].join('');
   document.getElementById('budgetAlerts').innerHTML = '';
 }
@@ -1192,7 +1180,7 @@ function renderChecklist() {
   });
   document.getElementById('checklist').textContent = lines.length
     ? `${roundName(r)} — ${limitUsedIn(rid)} ${limitNoun()}, `
-      + `${total} tickets, ¥${(total * cfg.unitPrice).toLocaleString()}\n\n` + lines.join('\n')
+      + `${total} tickets\n\n` + lines.join('\n')
     : 'Nothing allocated for this round yet.';
 }
 
@@ -1228,20 +1216,16 @@ function renderStats() {
 function statTable(title, rows) {
   const ta = rows.reduce((n, r) => n + r.a, 0);
   const tw = rows.reduce((n, r) => n + r.w, 0);
-  const price = S.config.unitPrice;
   const body = rows.map(r => `<tr>
       <td>${r.color ? `<span class="swatch" style="background:${safeColor(r.color)}"></span>` : ''}${esc(r.label)}</td>
       <td>${r.a || ''}</td><td>${r.w || ''}</td><td>${rate(r.w, r.a)}</td>
-      <td>${r.a ? yenStr(r.a * price) : ''}</td><td>${r.w ? yenStr(r.w * price) : ''}</td>
     </tr>`).join('');
   return `<div class="panel"><h3 style="margin-bottom:10px">${esc(title)}</h3>
     <div class="stats-scroll"><table class="stats">
-      <thead><tr><th></th><th>applied</th><th>won</th><th>rate</th>
-        <th>committed</th><th>paid</th></tr></thead>
+      <thead><tr><th></th><th>applied</th><th>won</th><th>rate</th></tr></thead>
       <tbody>${body}
         <tr class="total"><td>total</td><td>${ta || ''}</td><td>${tw || ''}</td>
-        <td>${rate(tw, ta)}</td><td>${ta ? yenStr(ta * price) : ''}</td>
-        <td>${tw ? yenStr(tw * price) : ''}</td></tr>
+        <td>${rate(tw, ta)}</td></tr>
       </tbody></table></div></div>`;
 }
 const rate = (w, a) => a ? Math.round((w / a) * 100) + '%' : '';
@@ -1252,7 +1236,6 @@ function renderSettings() {
   document.getElementById('cfgLimitUnit').value = cfg.limitUnit;
   document.getElementById('cfgMaxTickets').value = cfg.maxTickets;
   document.getElementById('cfgWindows').value = cfg.laterRoundWindows;
-  document.getElementById('cfgPrice').value = cfg.unitPrice;
 
   const pp = document.getElementById('cfgParts');
   pp.innerHTML = '';
@@ -1442,7 +1425,7 @@ const q = v => {
 function exportRecords() {
   const cfg = S.config;
   const rows = [['single', 'round', 'date', 'dow', 'part', 'block', 'member', 'member_jp',
-                 'applied', 'won', 'unit_price', 'yen_applied']];
+                 'applied', 'won']];
   S.rounds.forEach(r => {
     cfg.dates.forEach(d => {
       // partsInUse(), not allParts: every other reporting path uses it so that an
@@ -1454,7 +1437,7 @@ function exportRecords() {
           if (!e.a && !e.w) return;
           rows.push([cfg.singleName, r.label || r.num, d.label, dowOf(d.label), p,
                      `${d.label} 第${p}部`, m.name, m.jp,
-                     e.a, e.w, cfg.unitPrice, e.a * cfg.unitPrice]);
+                     e.a, e.w]);
         });
       });
     });
@@ -1500,7 +1483,7 @@ document.getElementById('modeW').onclick = () => { S.mode = 'w'; render(); };
 /* min="1" on a bare input is advisory: the element reports :invalid but its value still
    reads back as typed, so `+value || 1` cheerfully stored -3. A negative cap then reaches
    capTickets, the click handler writes a negative ticket count that set() will not delete
-   because it is not zero, and every total, the checklist and the yen figures follow it
+   because it is not zero, and every total and the checklist follow it
    down. Clamp on the way in, and write the clamped number back so the field agrees.
    The numInput widgets in the round bar already did this — these did not. */
 function bindNum(id, min, apply) {
@@ -1516,7 +1499,6 @@ function bindNum(id, min, apply) {
 bindNum('cfgBlocks', 1, v => { S.config.blocksPerRound = v; });
 bindNum('cfgMaxTickets', 1, v => { S.config.maxTickets = v; });
 bindNum('cfgWindows', 1, v => { S.config.laterRoundWindows = v; });
-bindNum('cfgPrice', 0, v => { S.config.unitPrice = v; });
 document.getElementById('cfgLimitUnit').onchange = e => { S.config.limitUnit = e.target.value; render(); };
 
 document.getElementById('btnAddDate').onclick = () => {
