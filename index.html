@@ -201,11 +201,16 @@
   input[type=color].swatch-pick::-webkit-color-swatch { border: 0; border-radius: 3px; }
   input[type=color].swatch-pick::-moz-color-swatch { border: 0; border-radius: 3px; }
 
-  .cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
-  .cfg-grid label { display: block; }
-  .cfg-grid .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 3px; }
-  .cfg-grid input { width: 100%; }
   .list-item { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 2px 2px 2px 10px; border-radius: 999px;
+    border: 1px solid var(--border-strong); background: var(--panel); font-weight: 600;
+  }
+  .chip .swatch { margin-right: 6px; }
+  .chip button { border: 0; background: none; color: var(--muted); padding: 2px 8px; border-radius: 999px; }
+  .chip button:hover:not(:disabled) { color: var(--warn); }
+  .chip button:disabled { opacity: .3; cursor: default; }
   .dow-badge {
     display: inline-block; min-width: 42px; text-align: center;
     font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
@@ -231,7 +236,6 @@
     .stat .v { font-size: 19px; }
     .bar { width: 120px; }
     .round-cfg { gap: 12px; }
-    .cfg-grid { grid-template-columns: 1fr; }
     .list-item { flex-wrap: wrap; }
     /* Stack the stat tables, keeping member/round and date/part paired. */
     .stat-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -260,6 +264,36 @@
 <main>
 
   <div id="notices"></div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Members</h2>
+      <span class="hint" id="membersHint"></span>
+    </div>
+    <div class="row">
+      <div class="row" style="gap:6px" id="memberChips"></div>
+      <select id="addMember"></select>
+    </div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Settings — dates, member colours and names</summary>
+      <div class="panel">
+        <h3 style="margin-bottom:8px">Dates</h3>
+        <div id="cfgDates" style="margin-bottom:8px"></div>
+        <button id="btnAddDate" style="margin-bottom:20px">+ date</button>
+
+        <h3 style="margin-bottom:8px">Members</h3>
+        <div id="cfgMembers"></div>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Parts</h2><span class="hint">the 部 you apply for</span></div>
+    <div class="parts-pick" id="cfgParts"></div>
+  </section>
 
   <section>
     <div class="sec-head">
@@ -304,58 +338,21 @@
   </section>
 
   <section>
-    <details>
-      <summary>Settings — dates, parts, members, default caps</summary>
-      <div class="panel">
-        <div class="cfg-grid">
-          <label><div class="k">Limit per round</div><input type="number" min="1" id="cfgBlocks"></label>
-          <label><div class="k">Counted as</div>
-            <select id="cfgLimitUnit">
-              <option value="blocks">blocks — date + part</option>
-              <option value="entries">entries — date + part + member</option>
-            </select>
-          </label>
-          <label><div class="k">Max tickets / member / block</div><input type="number" min="1" id="cfgMaxTickets"></label>
-          <label><div class="k">Windows in rounds after the first</div><input type="number" min="1" id="cfgWindows"></label>
-        </div>
-        <p class="hint" style="margin:-6px 0 18px; max-width:80ch">
-          An <b>entry</b> is one member in one 第N部 on one date — one line on the receipt.
-          A <b>block</b> is that whole row, however many members are in it. forTUNE caps
-          entries, which is why 15 × 3 = 45. These figures are per <b>application window</b>,
-          so a round with several windows scales them, and any round can override them above.
-          Cells grey out at the limit, as the site does.
-        </p>
-
-        <h3 style="margin-bottom:8px">Visible parts</h3>
-        <div class="parts-pick" id="cfgParts" style="margin-bottom:20px"></div>
-
-        <h3 style="margin-bottom:8px">Dates</h3>
-        <div id="cfgDates" style="margin-bottom:8px"></div>
-        <button id="btnAddDate" style="margin-bottom:20px">+ date</button>
-
-        <h3 style="margin-bottom:8px">Members</h3>
-        <div id="cfgMembers" style="margin-bottom:8px"></div>
-        <label class="row" style="gap:8px">
-          <select id="addMember"></select>
-          <span class="hint">picking one fills in the name — both fields stay editable</span>
-        </label>
-
-        <hr style="margin:22px 0; border:0; border-top:1px solid var(--border)">
-        <h3 style="margin-bottom:8px">Where your plan is kept</h3>
-        <p class="hint" style="margin:0 0 16px; max-width:80ch">
-          In this browser, and nowhere else. Nothing is uploaded and nothing is shared
-          between your devices. It survives closing the tab, restarting, and updates to
-          this page — it does <b>not</b> survive clearing site data, private browsing, or
-          moving to another phone or browser.
-          <br><br>
-          So: press <b>Export JSON</b> whenever you have something you would not want to
-          redo, and keep the file somewhere ordinary. <b>Import JSON</b> loads it back,
-          here or on any other device — that is also how you carry a plan to your phone.
-          Importing or resetting can be taken back with <b>Undo</b> in the top bar.
-        </p>
-        <button class="ghost" id="btnReset">Reset everything</button>
-      </div>
-    </details>
+    <div class="sec-head"><h2>Your data</h2><span class="hint">where your plan is kept</span></div>
+    <div class="panel">
+      <p class="hint" style="margin:0 0 16px; max-width:80ch">
+        In this browser, and nowhere else. Nothing is uploaded and nothing is shared
+        between your devices. It survives closing the tab, restarting, and updates to
+        this page — it does <b>not</b> survive clearing site data, private browsing, or
+        moving to another phone or browser.
+        <br><br>
+        So: press <b>Export JSON</b> whenever you have something you would not want to
+        redo, and keep the file somewhere ordinary. <b>Import JSON</b> loads it back,
+        here or on any other device — that is also how you carry a plan to your phone.
+        Importing or resetting can be taken back with <b>Undo</b> in the top bar.
+      </p>
+      <button class="ghost" id="btnReset">Reset everything</button>
+    </div>
   </section>
 
 </main>
@@ -421,10 +418,6 @@ function defaultState() {
     config: {
       // The schedule is public, so it ships preloaded. Members are personal and start blank.
       singleName: '18th single「イチャイチャ虫」',
-      blocksPerRound: 15,
-      maxTickets: 3,
-      laterRoundWindows: 3,
-      limitUnit: 'entries',
       allParts: [1, 2, 3, 4, 5, 6],
       // 18th times: 第1部 10:45, 第2部 12:15, 第3部 13:45, 第4部 15:45, 第5部 17:15, 第6部 18:45.
       visibleParts: [1, 2, 3, 4, 5, 6],
@@ -441,9 +434,9 @@ function defaultState() {
     // 第1次 is one application, 第2次 allows 3 and 第3次 allows 5, each with its own
     // 1人15種類 / 1種あたり3枚 limit.
     rounds: [
-      { id: uid(), num: 1, label: '', blocks: null, maxTickets: null, windows: 1 },
-      { id: uid(), num: 2, label: '', blocks: null, maxTickets: null, windows: 3 },
-      { id: uid(), num: 3, label: '', blocks: null, maxTickets: null, windows: 5 }
+      { id: uid(), num: 1, label: '', windows: null },
+      { id: uid(), num: 2, label: '', windows: null },
+      { id: uid(), num: 3, label: '', windows: null }
     ],
     activeRound: null,
     mode: 'a',
@@ -523,11 +516,8 @@ function hasSnapshot() {
 function migrate(s) {
   const d = defaultState();
   const incoming = s.config || {};
-  // v1 names. Read them before defaults are merged in, or the defaults would mask them.
-  const legacyBlocks = incoming.blocksPerRound == null ? incoming.blocksPerWave : null;
-  s.config = Object.assign({}, d.config, incoming);
-  if (legacyBlocks != null) s.config.blocksPerRound = legacyBlocks;
-  delete s.config.blocksPerWave;
+  // Keep only the keys this version knows.
+  s.config = Object.fromEntries(Object.keys(d.config).map(k => [k, incoming[k] ?? d.config[k]]));
 
   // Parts are compared as numbers everywhere, so coerce, drop junk and dedupe.
   const partList = (v, fb) => {
@@ -537,14 +527,6 @@ function migrate(s) {
   s.config.allParts = partList(s.config.allParts, d.config.allParts);
   s.config.visibleParts = partList(s.config.visibleParts, d.config.visibleParts);
 
-  const posInt = (v, fb) => Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : fb;
-  s.config.blocksPerRound = posInt(s.config.blocksPerRound, d.config.blocksPerRound);
-  s.config.maxTickets = posInt(s.config.maxTickets, d.config.maxTickets);
-  s.config.laterRoundWindows = posInt(s.config.laterRoundWindows, d.config.laterRoundWindows);
-  delete s.config.unitPrice;
-  if (s.config.limitUnit !== 'blocks' && s.config.limitUnit !== 'entries') {
-    s.config.limitUnit = d.config.limitUnit;
-  }
   if (s.waves && !s.rounds) { s.rounds = s.waves; delete s.waves; }
   if (s.activeWave && !s.activeRound) { s.activeRound = s.activeWave; delete s.activeWave; }
   s.config.dates = (s.config.dates || []).map(x => ({ id: x.id || uid(), label: x.label || '' }));
@@ -552,15 +534,13 @@ function migrate(s) {
     id: m.id || uid(), name: m.name || 'member', jp: m.jp || '',
     color: isColor(m.color) ? String(m.color) : PALETTE[i % PALETTE.length]
   }));
-  // Anything not a positive whole number means "no override".
+  // Anything not a positive whole number means "the round's maximum".
   const posIntOrNull = v => (v == null || v === '') ? null
     : (Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : null);
   s.rounds = (s.rounds && s.rounds.length ? s.rounds : d.rounds).map((r, i) => ({
     id: r.id || uid(),
     num: Number.isFinite(+r.num) && +r.num > 0 ? +r.num : i + 1,
     label: String(r.label || ''),
-    blocks: posIntOrNull(r.blocks),
-    maxTickets: posIntOrNull(r.maxTickets),
     windows: posIntOrNull(r.windows)
   }));
 
@@ -578,8 +558,6 @@ function migrate(s) {
   }
   s.entries = clean;
   s.mode = s.mode || 'a';
-  // Entries became the limit unit in v3. Flip once, so a later choice of blocks sticks.
-  if ((s.version || 1) < 3) s.config.limitUnit = 'entries';
   s.version = 3;
   // ALL is a valid selection even though it matches no round.
   if (s.activeRound !== ALL && !s.rounds.some(r => r.id === s.activeRound)) {
@@ -654,20 +632,15 @@ function sum(field, filter) {
   return n;
 }
 
-/* Distinct date+part slots holding at least one ticket. One grid row = one block. */
-function blocksUsedIn(roundId) {
-  const seen = new Set();
-  for (const k in S.entries) {
-    const [r, d, p] = k.split('|');
-    if (r !== roundId) continue;
-    if ((S.entries[k].a || 0) > 0) seen.add(d + '|' + p);
-  }
-  return seen.size;
-}
+/* forTUNE's rules: each window allows 15 entries and 3 tickets per slot. Round 1 has
+   one window, round 2 has three, and every round after that has five. */
+const ENTRIES_PER_WINDOW = 15;
+const TICKETS_PER_WINDOW = 3;
+const maxWindows = num => num <= 1 ? 1 : num === 2 ? 3 : 5;
 
 /* Receipt lines. A slot holding more than one window's cap spans several windows,
    one line each: 5 tickets at a cap of 3 is 2 entries. */
-const entriesFor = a => a > 0 ? Math.ceil(a / S.config.maxTickets) : 0;
+const entriesFor = a => a > 0 ? Math.ceil(a / TICKETS_PER_WINDOW) : 0;
 function entriesUsedIn(roundId) {
   let n = 0;
   for (const k in S.entries) {
@@ -677,22 +650,14 @@ function entriesUsedIn(roundId) {
   return n;
 }
 
-/* Whichever unit the per-round limit is counted against. */
-const limitsEntries = () => S.config.limitUnit === 'entries';
-const limitUsedIn = rid => limitsEntries() ? entriesUsedIn(rid) : blocksUsedIn(rid);
-const limitNoun = () => limitsEntries() ? 'entries' : 'blocks';
-
 const isSummary = () => S.activeRound === ALL;
 
 const activeRound = () => S.rounds.find(r => r.id === S.activeRound);
 const roundName = r => r.label ? `Round ${r.label}` : `Round ${r.num}`;
-/* Caps scale with the round's windows. An explicit per-round value wins. */
-function windowsOf(r) {
-  if (Number.isFinite(+r.windows) && +r.windows > 0) return Math.floor(+r.windows);
-  return S.rounds.indexOf(r) === 0 ? 1 : S.config.laterRoundWindows;
-}
-const capBlocks = r => r.blocks || S.config.blocksPerRound * windowsOf(r);
-const capTickets = r => r.maxTickets || S.config.maxTickets * windowsOf(r);
+/* The windows you plan to use, never more than the round allows. */
+const windowsOf = r => Math.min(r.windows || maxWindows(r.num), maxWindows(r.num));
+const capEntries = r => ENTRIES_PER_WINDOW * windowsOf(r);
+const capTickets = r => TICKETS_PER_WINDOW * windowsOf(r);
 const visibleParts = () => S.config.visibleParts.slice().sort((a, b) => a - b);
 const dateById = id => S.config.dates.find(d => d.id === id);
 const memberById = id => S.config.members.find(m => m.id === id);
@@ -747,6 +712,7 @@ function textOn(bg) {
 /* ---------- render ---------- */
 
 function render() {
+  renderMembers();
   renderRounds();
   renderBudget();
   renderGrid();
@@ -795,17 +761,15 @@ function renderRounds() {
 
   const r = activeRound();
   const w = windowsOf(r);
+  const max = maxWindows(r.num);
   cfg.appendChild(field('Label', textInput(r.label, v => { r.label = v.trim(); }, String(r.num), 110)));
-  cfg.appendChild(field('Windows', numInput(r.windows, v => { r.windows = v; }, w)));
-  cfg.appendChild(field(`${limitNoun()} this round`,
-    numInput(r.blocks, v => { r.blocks = v; }, S.config.blocksPerRound * w)));
-  cfg.appendChild(field('Max tickets / member / block',
-    numInput(r.maxTickets, v => { r.maxTickets = v; }, S.config.maxTickets * w)));
+  const win = numInput(r.windows, v => { r.windows = v == null ? null : Math.min(v, max); }, max);
+  win.max = String(max);
+  cfg.appendChild(field(`Windows (max ${max})`, win));
   const note = document.createElement('span');
   note.className = 'hint';
-  note.textContent = w === 1
-    ? 'one application window — blank fields use the Settings defaults'
-    : `${w} application windows — blank fields scale the Settings defaults by ${w}`;
+  note.textContent = `${w} ${w === 1 ? 'window' : 'windows'}: up to ${capEntries(r)} entries `
+    + `and ${capTickets(r)} tickets per slot`;
   cfg.appendChild(note);
 }
 
@@ -822,17 +786,16 @@ function renderBudget() {
   if (isSummary()) return renderSummaryBudget();
   const r = activeRound();
   const rid = r.id;
-  const capped = limitUsedIn(rid);
-  const maxBlocks = capBlocks(r);
+  const capped = entriesUsedIn(rid);
+  const maxEntries = capEntries(r);
   const maxTix = capTickets(r);
   const applied = sum('a', e => e.r === rid);
   const won = sum('w', e => e.r === rid);
-  const overLimit = capped > maxBlocks;
+  const overLimit = capped > maxEntries;
 
-  const cappedLabel = limitsEntries() ? 'Entries' : 'Blocks';
 
   document.getElementById('budget').innerHTML = [
-    stat(cappedLabel, `${capped}<small> / ${maxBlocks}</small>`, capped / maxBlocks, overLimit),
+    stat('Entries', `${capped}<small> / ${maxEntries}</small>`, capped / maxEntries, overLimit),
     stat('Tickets applied', applied, null, false),
     stat('Tickets won', won, null, false),
     // What was in hand before this round started.
@@ -843,7 +806,7 @@ function renderBudget() {
   ].join('');
 
   const alerts = [];
-  if (overLimit) alerts.push(`Over budget: ${capped} ${limitNoun()} used, limit is ${maxBlocks}. Remove ${capped - maxBlocks}.`);
+  if (overLimit) alerts.push(`Over budget: ${capped} entries used, limit is ${maxEntries}. Remove ${capped - maxEntries}.`);
 
   const overCells = [];
   for (const k in S.entries) {
@@ -861,7 +824,7 @@ function renderBudget() {
     ? [`${hid.entries} ${hid.entries === 1 ? 'entry' : 'entries'} (${hid.tickets} tickets) `
        + `${hid.entries === 1 ? 'sits' : 'sit'} in parts hidden from the grid, and still `
        + `${hid.entries === 1 ? 'counts' : 'count'} toward this round's limit. `
-       + `Turn those parts back on in Settings to edit them.`]
+       + `Turn those parts back on above to edit them.`]
     : [];
 
   document.getElementById('budgetAlerts').innerHTML =
@@ -908,7 +871,7 @@ function renderGrid() {
   html += '<th class="tot">tickets</th></tr></thead><tbody>';
 
   // Grey out at the limit like forTUNE. Never in won mode: a win is a fact.
-  const atLimit = mode === 'a' && limitUsedIn(rid) >= capBlocks(r);
+  const atLimit = mode === 'a' && entriesUsedIn(rid) >= capEntries(r);
 
   cfg.dates.forEach(d => {
     const dow = dowOf(d.label);
@@ -925,14 +888,11 @@ function renderGrid() {
         const v = e[mode];
         rowTotal += v;
         const over = mode === 'a' && v > maxTix;
-        const blockOpen = cfg.members.some(x => get(rid, d.id, p, x.id).a > 0);
-        // In entries, the next ticket costs a line whenever the slot's windows are all full.
-        const wouldCost = limitsEntries() ? v % cfg.maxTickets === 0 : !blockOpen;
-        // Applied: shut once the round limit is spent. Won: shut where nothing was
-        // applied, since a win there is impossible.
-        const shut = mode === 'a' ? (atLimit && v === 0 && wouldCost) : e.a === 0;
+        // Applied: shut empty cells once the round limit is spent. Won: shut where nothing
+        // was applied, since a win there is impossible.
+        const shut = mode === 'a' ? (atLimit && v === 0) : e.a === 0;
         const why = mode === 'a'
-          ? `Round limit of ${capBlocks(r)} ${limitNoun()} reached`
+          ? `Round limit of ${capEntries(r)} entries reached`
           : 'No tickets applied here';
         // Applied mode only: in won mode the cell already is the won figure.
         const held = mode === 'a' ? heldAt(d.id, p, m.id) : 0;
@@ -968,8 +928,8 @@ function renderGrid() {
       const cur = cell[mode];
       const max = mode === 'a' ? maxTix : cell.a;   // wins are bounded by applications
       // At the limit, stop rather than open another entry. Wrapping to 0 would drop tickets.
-      if (!down && mode === 'a' && atLimit && limitsEntries()
-          && cur < max && cur >= entriesFor(cur) * S.config.maxTickets) return;
+      if (!down && mode === 'a' && atLimit
+          && cur < max && cur >= entriesFor(cur) * TICKETS_PER_WINDOW) return;
       // A cell can sit above the cap after an import or a cap change. Stepping up brings
       // it down to the cap rather than wiping the value; stepping down goes by one.
       let next = down ? cur - 1 : (cur > max ? max : (cur >= max ? 0 : cur + 1));
@@ -1068,7 +1028,7 @@ function renderChecklist() {
          + `第${x.p}部  ${x.a}${vis.has(x.p) ? '' : '   ← hidden part'}`;
   });
   document.getElementById('checklist').textContent = lines.length
-    ? `${roundName(r)} — ${limitUsedIn(rid)} ${limitNoun()}, `
+    ? `${roundName(r)} — ${entriesUsedIn(rid)} entries, `
       + `${total} tickets\n\n` + lines.join('\n')
     : 'Nothing allocated for this round yet.';
 }
@@ -1121,11 +1081,6 @@ const rate = (w, a) => a ? Math.round((w / a) * 100) + '%' : '';
 
 function renderSettings() {
   const cfg = S.config;
-  document.getElementById('cfgBlocks').value = cfg.blocksPerRound;
-  document.getElementById('cfgLimitUnit').value = cfg.limitUnit;
-  document.getElementById('cfgMaxTickets').value = cfg.maxTickets;
-  document.getElementById('cfgWindows').value = cfg.laterRoundWindows;
-
   const pp = document.getElementById('cfgParts');
   pp.innerHTML = '';
   cfg.allParts.forEach(p => {
@@ -1182,13 +1137,50 @@ function renderSettings() {
       sw,
       textInput(m.name, v => { m.name = v; }, 'shorthand', 120),
       textInput(m.jp, v => { m.jp = v; }, '日本語名', 140)
-    ], () => {
-      if (cfg.members.length <= 1) return;
-      cfg.members = cfg.members.filter(x => x !== m);
-      purge(); render();
-    }));
+    ], () => removeMember(m)));
   });
+}
 
+/* Removing a member deletes their tickets in every round, so ask when there are any. */
+function removeMember(m) {
+  const cfg = S.config;
+  if (cfg.members.length <= 1) return;
+  const n = sum('a', e => e.m === m.id);
+  if (n && !confirm(`Remove ${m.name} and the ${n} tickets planned for them?`)) return;
+  cfg.members = cfg.members.filter(x => x !== m);
+  purge(); render();
+}
+
+/* The first-run placeholder, before anyone has been picked. */
+function isStarter() {
+  const ms = S.config.members;
+  return ms.length === 1 && ms[0].name === 'member' && !ms[0].jp
+    && !Object.keys(S.entries).some(k => k.split('|')[3] === ms[0].id);
+}
+
+function renderMembers() {
+  const cfg = S.config;
+  const box = document.getElementById('memberChips');
+  box.innerHTML = '';
+  const starter = isStarter();
+  document.getElementById('membersHint').textContent = starter
+    ? 'pick who you are applying for to start'
+    : 'colours and names are in Settings';
+  if (!starter) {
+    cfg.members.forEach(m => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.title = m.jp || m.name;
+      chip.innerHTML = `<span class="swatch" style="background:${safeColor(m.color)}"></span>${esc(m.name)}`;
+      const rm = document.createElement('button');
+      rm.textContent = '×';
+      rm.setAttribute('aria-label', `remove ${m.name}`);
+      rm.disabled = cfg.members.length <= 1;
+      rm.onclick = () => removeMember(m);
+      chip.appendChild(rm);
+      box.appendChild(chip);
+    });
+  }
   renderMemberPicker();
 }
 
@@ -1223,13 +1215,16 @@ function renderMemberPicker() {
     if (!v) return;
     const chosen = add.selectedOptions[0];
     // Fill in the untouched starter placeholder instead of adding beside it.
-    const only = cfg.members.length === 1 ? cfg.members[0] : null;
-    const blank = only && only.name === 'member' && !only.jp
-      && !Object.keys(S.entries).some(k => k.split('|')[3] === only.id);
-    const target = blank ? only
-      : { id: uid(), name: '', jp: '', color: PALETTE[cfg.members.length % PALETTE.length] };
+    let custom = '';
     if (v === '__custom__') {
-      target.name = 'member'; target.jp = '';
+      custom = (prompt('Name for this member') || '').trim();
+      if (!custom) { add.value = ''; return; }
+    }
+    const blank = isStarter();
+    const target = blank ? cfg.members[0]
+      : { id: uid(), name: '', jp: '', color: PALETTE[cfg.members.length % PALETTE.length] };
+    if (custom) {
+      target.name = custom; target.jp = '';
     } else {
       target.name = chosen.dataset.short; target.jp = v;
     }
@@ -1336,7 +1331,7 @@ document.getElementById('singleName').onchange = e => { S.config.singleName = e.
 
 document.getElementById('btnAddRound').onclick = () => {
   const num = Math.max(0, ...S.rounds.map(r => +r.num).filter(Number.isFinite)) + 1;
-  const r = { id: uid(), num, label: '', blocks: null, maxTickets: null, windows: null };
+  const r = { id: uid(), num, label: '', windows: null };
   S.rounds.push(r);
   S.activeRound = r.id;
   render();
@@ -1353,22 +1348,6 @@ document.getElementById('btnDelRound').onclick = () => {
 
 document.getElementById('modeA').onclick = () => { S.mode = 'a'; render(); };
 document.getElementById('modeW').onclick = () => { S.mode = 'w'; render(); };
-
-/* min="1" is only advisory, so clamp and write the clamped value back. */
-function bindNum(id, min, apply) {
-  const el = document.getElementById(id);
-  el.onchange = () => {
-    const n = Math.floor(+el.value);
-    const v = Number.isFinite(n) ? Math.max(min, n) : min;
-    el.value = v;
-    apply(v);
-    render();
-  };
-}
-bindNum('cfgBlocks', 1, v => { S.config.blocksPerRound = v; });
-bindNum('cfgMaxTickets', 1, v => { S.config.maxTickets = v; });
-bindNum('cfgWindows', 1, v => { S.config.laterRoundWindows = v; });
-document.getElementById('cfgLimitUnit').onchange = e => { S.config.limitUnit = e.target.value; render(); };
 
 document.getElementById('btnAddDate').onclick = () => {
   S.config.dates.push({ id: uid(), label: '' });
