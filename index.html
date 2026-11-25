@@ -362,17 +362,17 @@
 
 /* Release name, bumped by hand when something notable ships. Never derive the storage KEY
    from it — KEY changing is what silently orphans everyone's saved plan. */
-const APP_VERSION = 'v1.2.1';
+const APP_VERSION = 'v1.3.0';
 
 const KEY = 'miguri-planner-v1';
 const PALETTE = ['#c9b6e4', '#fcd98b', '#a8dcc0', '#f5b7c0', '#a9c9e8', '#e0cba8', '#c4dda0', '#d8b8d8'];
 const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-/* The 18th's miguri lineup (the event lineup, not the artist page). It only seeds
+/* The 19th's miguri lineup (the event lineup, not the artist page). It only seeds
    editable fields, so a later lineup change never blocks anyone. */
 const ROSTER = [
   ['二期生', [['金村美玖', 'kanemura'], ['小坂菜緒', 'kosaka']]],
-  ['三期生', [['上村ひなの', 'kamimura'], ['髙橋未来虹', 'takahashi'], ['森本茉莉', 'morimoto']]],
+  ['三期生', [['上村ひなの', 'kamimura'], ['髙橋未来虹', 'takahashi']]],
   ['四期生', [['石塚瑶季', 'ishizuka'], ['小西夏菜実', 'konishi'], ['清水理央', 'shimizu'],
               ['正源司陽子', 'shogenji'], ['竹内希来里', 'takeuchi'], ['平尾帆夏', 'hirao'],
               ['平岡海月', 'hiraoka'], ['藤嶌果歩', 'fujishima'], ['宮地すみれ', 'miyachi'],
@@ -417,17 +417,17 @@ function defaultState() {
     version: 3,
     config: {
       // The schedule is public, so it ships preloaded. Members are personal and start blank.
-      singleName: '18th single「イチャイチャ虫」',
+      singleName: '19th single「アーカイブ」',
       allParts: [1, 2, 3, 4, 5, 6],
-      // 18th times: 第1部 10:45, 第2部 12:15, 第3部 13:45, 第4部 15:45, 第5部 17:15, 第6部 18:45.
+      // 19th times: 第1部 10:45, 第2部 12:15, 第3部 13:45, 第4部 15:45, 第5部 17:15, 第6部 18:45.
       visibleParts: [1, 2, 3, 4, 5, 6],
       dates: [
-        { id: uid(), label: '2026-10-04' },
-        { id: uid(), label: '2026-10-11' },
-        { id: uid(), label: '2026-10-18' },
-        { id: uid(), label: '2026-10-25' },
-        { id: uid(), label: '2026-11-01' },
-        { id: uid(), label: '2026-12-06' }
+        { id: uid(), label: '2027-01-23' },
+        { id: uid(), label: '2027-01-30' },
+        { id: uid(), label: '2027-02-07' },
+        { id: uid(), label: '2027-02-14' },
+        { id: uid(), label: '2027-03-07' },
+        { id: uid(), label: '2027-03-13' }
       ],
       members: [{ id: uid(), name: 'member', jp: '', color: PALETTE[0] }]
     },
@@ -1287,6 +1287,16 @@ function download(name, text, type, bom) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+/* Single name plus local export date, stripped of characters filesystems reject. */
+function exportName(ext) {
+  const t = new Date();
+  const day = [t.getFullYear(), t.getMonth() + 1, t.getDate()]
+    .map(n => String(n).padStart(2, '0')).join('-');
+  const name = String(S.config.singleName || '')
+    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ').trim().replace(/^\.+/, '') || 'miguri';
+  return `${name} ${day}.${ext}`;
+}
 /* Text a spreadsheet would run as a formula gets a leading apostrophe. */
 const q = v => {
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
@@ -1312,7 +1322,7 @@ function exportRecords() {
       });
     });
   });
-  download('records.csv', rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv', true);
+  download(exportName('csv'), rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv', true);
 }
 
 /* Shows what the incoming data holds, so a wrong file is noticed before it replaces anything. */
@@ -1357,7 +1367,7 @@ document.getElementById('btnAddDate').onclick = () => {
 
 document.getElementById('btnExportCsv').onclick = exportRecords;
 document.getElementById('btnExportJson').onclick = () =>
-  download('miguri-backup.json', JSON.stringify(S, null, 2), 'application/json');
+  download(exportName('json'), JSON.stringify(S, null, 2), 'application/json');
 
 document.getElementById('btnImportJson').onclick = () => {
   const inp = document.createElement('input');

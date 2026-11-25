@@ -20,7 +20,7 @@ Everything else is a later version.
 
 **Not in v1.0, on purpose:**
 
-- **CSV import.** `records.csv` is lossy relative to the state: it carries no per-round overrides, no `limitUnit`, no visible-parts selection, no member colours, no round labels. Importing an edited CSV would silently drop all of that, and the old implementation rebuilt the entire state from scratch to do it. JSON is the round trip; CSV is the way out to a spreadsheet.
+- **CSV import.** The CSV export is lossy relative to the state: it carries no per-round overrides, no `limitUnit`, no visible-parts selection, no member colours, no round labels. Importing an edited CSV would silently drop all of that, and the old implementation rebuilt the entire state from scratch to do it. JSON is the round trip; CSV is the way out to a spreadsheet.
 - **Transfer codes and the sync service.** Built and working, parked in `miguri-sync/`. See "Parked work" below.
 
 ## The short version
